@@ -12,10 +12,6 @@ body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f1f1f; color: #fff; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: opacity 0.4s; z-index:1000;}
 .toast.show { opacity: 1; }
 input[type="file"]{ font-size:10px; }
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0a0a0a; }
-::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #ff0000; }
 </style>
 </head>
 <body class="pb-10">
@@ -187,7 +183,7 @@ window.removerAprovado = async (email)=>{
   if(!confirm("Remover jogador da lista de aprovados?")) return;
   const p = listaAprovadosData.find(x=>x.email===email);
   listaAprovadosData = listaAprovadosData.filter(p=>p.email!==email);
-  aprovados = aprovados.filter(p=>p.nome !== p?.nome);
+  aprovados = aprovados.filter(p=>p.nome!==p?.nome);
   await salvar();
   renderRank();
   renderAdmin();
