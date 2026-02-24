@@ -96,14 +96,12 @@ const docRef = doc(db,"site","dados");
 
 let aprovados=[], espera=[], listaAprovadosData=[], bannerSalvo="https://images.alphacoders.com", isAdmin=false;
 
-// Inicializa Firestore
 async function inicializar(){ 
   const snap = await getDoc(docRef);
   if(!snap.exists()) await setDoc(docRef,{rank:[],espera:[],aprovados:[],banner:bannerSalvo});
 }
 await inicializar();
 
-// Atualiza local quando Firestore muda
 onSnapshot(docRef, snap=>{
   if(snap.exists()){
     const d = snap.data();
@@ -116,7 +114,6 @@ onSnapshot(docRef, snap=>{
   }
 });
 
-// Função Toast
 function mostrarToast(msg){ 
   const t=document.getElementById("toast");
   t.textContent=msg;
@@ -124,13 +121,11 @@ function mostrarToast(msg){
   setTimeout(()=>t.classList.remove("show"),3000);
 }
 
-// Salva dados no Firestore
 async function salvar(){ await setDoc(docRef,{rank:aprovados,espera:espera,aprovados:listaAprovadosData,banner:bannerSalvo}); }
 
 window.abrirModal = ()=> modalCadastro.classList.remove("hidden");
 window.fecharModal = ()=> modalCadastro.classList.add("hidden");
 
-// Cadastro
 window.solicitarEntrada = async ()=>{
   const nome=regNome.value.trim();
   const email=regEmail.value.trim();
@@ -140,7 +135,7 @@ window.solicitarEntrada = async ()=>{
   const duplicado=[...espera,...listaAprovadosData].some(p=>p.nome===nome || p.email===email || p.fone===fone);
   if(duplicado){ mostrarToast("❌ Já cadastrado!"); return; }
 
-  const senha=prompt("Primeiro acesso! Crie uma senha alfanumérica (min 6 dígitos):");
+  const senha=prompt("Primeiro acesso! Crie uma senha alfanumérica (mínimo 6 dígitos):");
   if(!senha||senha.length<6||!/\d/.test(senha)||!/[a-zA-Z]/.test(senha)){ mostrarToast("❌ Senha inválida"); return; }
 
   espera.push({nome,email,fone,senha,id:Date.now()});
@@ -150,14 +145,12 @@ window.solicitarEntrada = async ()=>{
   fecharModal();
 };
 
-// Login Admin
 window.loginAdmin = ()=>{
   const senha = prompt("Senha Admin:");
   if(senha==="123"){ isAdmin=true; document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block"); mostrarToast("✅ Modo Admin Ativado"); }
   else if(senha!==null) mostrarToast("❌ Senha incorreta!");
 };
 
-// Aprovar / Reprovar
 window.aprovar = async (id)=>{
   const idx=espera.findIndex(p=>p.id===id);
   if(idx===-1) return;
@@ -175,11 +168,9 @@ window.removerAprovado = async (email)=>{
   await salvar(); renderRank(); renderAdmin(); 
 };
 
-// Rank
 window.addScore = async (nome)=>{ const k=parseInt(prompt("Kills","0"))||0; const idx=aprovados.findIndex(p=>p.nome===nome); if(idx>-1){ aprovados[idx].matches+=1; aprovados[idx].kills+=k; await salvar(); renderRank(); } };
 window.removerDoRank = async (nome)=>{ aprovados=aprovados.filter(p=>p.nome!==nome); listaAprovadosData=listaAprovadosData.filter(p=>p.nome!==nome); await salvar(); renderRank(); renderAdmin(); };
 
-// Sorteador de Equipes - divisão proporcional
 window.sortearEquipes = ()=>{
   const totalJogadores = aprovados.length;
   if(totalJogadores < 2){ mostrarToast("Precisa de pelo menos 2 jogadores"); return; }
@@ -191,10 +182,11 @@ window.sortearEquipes = ()=>{
   const lista = [...aprovados].sort(() => Math.random()-0.5);
   const equipes = Array.from({length:numEquipes}, ()=>[]);
 
-  lista.forEach((player,index)=>{
-    const equipeIndex = index % numEquipes;
-    equipes[equipeIndex].push(player.nome);
-  });
+  if(totalJogadores <= numEquipes){
+    lista.forEach((player,index)=>equipes[index].push(player.nome));
+  } else {
+    lista.forEach((player,index)=>equipes[index % numEquipes].push(player.nome));
+  }
 
   const cores = ["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400","bg-purple-500","bg-orange-400"];
   const container = document.getElementById("equipesContainer");
@@ -207,7 +199,6 @@ window.sortearEquipes = ()=>{
   });
 };
 
-// Render
 function renderRank(){
   rankBody.innerHTML="";
   aprovados.forEach((p,i)=>{
