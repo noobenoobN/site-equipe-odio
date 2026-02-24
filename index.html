@@ -156,36 +156,39 @@ window.aprovar = async (id)=>{
 };
 
 window.reprovar = async (id)=>{ espera=espera.filter(p=>p.id!==id); await salvar(); renderAdmin(); };
-window.removerAprovado = async (email)=>{ listaAprovadosData=listaAprovadosData.filter(p=>p.email!==email); aprovados=aprovados.filter(p=>p.nome!==p?.nome); await salvar(); renderRank(); renderAdmin(); };
+window.removerAprovado = async (email)=>{ 
+  listaAprovadosData=listaAprovadosData.filter(p=>p.email!==email); 
+  aprovados=aprovados.filter(p=>p.nome!==listaAprovadosData.find(a=>a.email===email)?.nome); 
+  await salvar(); renderRank(); renderAdmin(); 
+};
 window.addScore = async (nome)=>{ const k=parseInt(prompt("Kills","0"))||0; const idx=aprovados.findIndex(p=>p.nome===nome); if(idx>-1){ aprovados[idx].matches+=1; aprovados[idx].kills+=k; await salvar(); renderRank(); } };
 window.removerDoRank = async (nome)=>{ aprovados=aprovados.filter(p=>p.nome!==nome); listaAprovadosData=listaAprovadosData.filter(p=>p.nome!==nome); await salvar(); renderRank(); renderAdmin(); };
 
-// SORTEADOR PROPORCIONAL CORRIGIDO
+// SORTEADOR ROUND-ROBIN
 window.sortearEquipes = ()=>{
-  if(aprovados.length<2){ mostrarToast("Precisa de pelo menos 2 jogadores"); return; }
+  if(aprovados.length < 2){ mostrarToast("Precisa de pelo menos 2 jogadores"); return; }
 
-  const lista = [...aprovados].sort(() => Math.random() - 0.5);
+  const lista = [...aprovados].sort(() => Math.random() - 0.5); 
   const maxPorEquipe = 4;
   const numEquipes = Math.ceil(lista.length / maxPorEquipe);
 
-  // Cria arrays de equipes
   let equipes = Array.from({length:numEquipes}, () => []);
 
-  // Distribui proporcionalmente
-  let eqIndex = 0;
-  lista.forEach((p)=>{
-    equipes[eqIndex].push(p.nome);
-    eqIndex++;
-    if(eqIndex >= numEquipes) eqIndex = 0;
+  // Round-robin: cada equipe recebe 1 jogador de cada vez
+  let i = 0;
+  lista.forEach((p) => {
+    equipes[i % numEquipes].push(p.nome);
+    i++;
   });
 
-  const cores=["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400","bg-purple-500","bg-orange-400"];
-  const container=document.getElementById("equipesContainer");
-  container.innerHTML="";
-  equipes.forEach((eq,i)=>{
-    const div=document.createElement("div");
-    div.className=`equipe ${cores[i%cores.length]} p-2 mb-2`;
-    div.textContent=`Equipe ${i+1}:\n${eq.join(", ")}`;
+  const cores = ["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400","bg-purple-500","bg-orange-400"];
+  const container = document.getElementById("equipesContainer");
+  container.innerHTML = "";
+
+  equipes.forEach((eq,j)=>{
+    const div = document.createElement("div");
+    div.className = `equipe ${cores[j % cores.length]} p-2 mb-2`;
+    div.textContent = `Equipe ${j+1}:\n${eq.join(", ")}`;
     container.appendChild(div);
   });
 };
