@@ -4,9 +4,9 @@ let aprovados = [];
 let espera = [];
 let bannerSalvo = "https://images.alphacoders.com";
 
-const DATA_URL = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPO/main/dados.json";
-const API_URL  = "https://api.github.com/repos/SEU_USUARIO/SEU_REPO/contents/dados.json";
-const GITHUB_TOKEN = "SEU_TOKEN_GITHUB_AQUI"; // Somente admin
+const DATA_URL = "https://github.com/noobenoobN/site-equipe-odio/blob/main/dados.json";
+const API_URL  = "https://api.github.com/repos/site-equipe-odio/blob/contents/dados.json";
+const GITHUB_TOKEN = "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"; // Somente admin
 
 window.onload = carregarDados;
 
@@ -131,3 +131,4 @@ async function salvarDadosNaNuvem(){
     else alert("❌ Falha ao atualizar dados!");
   }catch(err){ console.error(err); alert("❌ Erro ao salvar na nuvem"); }
 }
+
