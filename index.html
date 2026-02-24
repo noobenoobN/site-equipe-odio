@@ -35,13 +35,8 @@
   <section id="adminPanel" class="admin-only space-y-6">
     <div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
 
-      <!-- Banner -->
-      <h3 class="text-yellow-500 font-bold mb-3 uppercase">🖼️ Banner</h3>
-      <div class="flex gap-2 mb-4">
-        <input id="newBannerUrl" type="text" placeholder="URL da imagem" class="flex-1 bg-black border border-zinc-700 p-2 rounded text-white text-xs" />
-        <button onclick="updateBannerUrl()" class="bg-yellow-600 px-4 py-2 text-black text-xs rounded font-bold">OK</button>
-        <input type="file" id="uploadBannerInput" onchange="uploadBannerLocal(event)" />
-      </div>
+      <!-- Botão Editar Banner -->
+      <button onclick="abrirModalBanner()" class="bg-yellow-600 px-4 py-2 text-black font-bold rounded mb-4">✏️ Editar Banner</button>
 
       <!-- Recrutas -->
       <h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas</h3>
@@ -81,6 +76,20 @@
       <button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar</button>
       <button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase">Fechar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL BANNER -->
+<div id="modalBanner" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+  <div class="bg-zinc-900 p-8 rounded border border-yellow-600 max-w-md w-full space-y-4">
+    <h2 class="text-2xl font-bold text-center uppercase">Editar Banner</h2>
+    <input id="newBannerUrl" type="text" placeholder="Coloque a URL da imagem" class="w-full bg-black border border-zinc-700 p-2 rounded text-white text-xs" />
+    <input type="file" id="uploadBannerInput" />
+    <div class="flex gap-2">
+      <button onclick="updateBannerUrl()" class="bg-yellow-600 px-4 py-2 text-black font-bold rounded flex-1">Usar URL</button>
+      <button onclick="uploadBannerLocalFromInput()" class="bg-yellow-700 px-4 py-2 text-black font-bold rounded flex-1">Usar Arquivo</button>
+    </div>
+    <button onclick="fecharModalBanner()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
   </div>
 </div>
 
@@ -132,9 +141,12 @@ async function salvar() {
   await setDoc(docRef, { rank: aprovados, espera: espera, aprovados: window.listaAprovadosData, banner: bannerSalvo });
 }
 
-// Modal
+// Modals
 window.abrirModal = () => modalCadastro.classList.remove("hidden");
 window.fecharModal = () => modalCadastro.classList.add("hidden");
+
+window.abrirModalBanner = () => modalBanner.classList.remove("hidden");
+window.fecharModalBanner = () => modalBanner.classList.add("hidden");
 
 // Cadastro com verificação duplicados
 window.solicitarEntrada = async () => {
@@ -190,13 +202,13 @@ window.loginAdmin = ()=>{
 // Banner
 window.updateBannerUrl = async ()=>{
   const url = newBannerUrl.value.trim();
-  if(url){ bannerSalvo=url; document.getElementById("bannerImg").src=bannerSalvo; await salvar(); }
+  if(url){ bannerSalvo=url; document.getElementById("bannerImg").src=bannerSalvo; await salvar(); fecharModalBanner(); }
 };
-window.uploadBannerLocal = async (e)=>{
-  const file = e.target.files[0];
+window.uploadBannerLocalFromInput = async ()=>{
+  const file = uploadBannerInput.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = async (ev)=>{ bannerSalvo=ev.target.result; document.getElementById("bannerImg").src=bannerSalvo; await salvar(); }
+  reader.onload = async (ev)=>{ bannerSalvo=ev.target.result; document.getElementById("bannerImg").src=bannerSalvo; await salvar(); fecharModalBanner(); }
   reader.readAsDataURL(file);
 };
 
