@@ -36,7 +36,7 @@ button{ cursor:pointer; }
 <h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas (Aprovar / Reprovar)</h3>
 <div id="listaEspera" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
-<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Lista de Aprovados</h3>
+<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Lista de Aprovados <span id="contagemAprovados" class="text-white text-xs"></span></h3>
 <div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
 <h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Sorteador de Equipes</h3>
@@ -216,6 +216,9 @@ function renderRank(){
 }
 
 function renderAdmin(){
+  // Atualiza contagem de aprovados
+  contagemAprovados.textContent=`(${listaAprovadosData.length} jogador(es))`;
+
   listaEspera.innerHTML="";
   espera.forEach(p=>{
     listaEspera.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
