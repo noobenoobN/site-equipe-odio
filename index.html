@@ -4,180 +4,172 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Equipe [ODIO] - Oficial</title>
-
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
-
 <style>
-body { font-family: 'Oswald', sans-serif; background:#050505; color:#eee; }
-.admin-only { display:none; }
-button { cursor:pointer; }
+body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
+.admin-only { display: none; }
+.equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
+button{ cursor:pointer; }
+#infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
 </style>
 </head>
-<body>
+<body class="pb-10">
 
-<!-- BANNER -->
-<section class="w-full h-[250px] bg-zinc-900 border-b-4 border-red-600"></section>
+<section class="relative w-full h-[300px] md:h-[400px] bg-zinc-900 border-b-4 border-red-600">
+<img id="bannerImg" src="https://images.alphacoders.com" class="w-full h-full object-cover opacity-60">
+</section>
 
 <!-- NAV -->
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
-
   <div class="flex gap-4">
-    <button onclick="abrirModal()"
-      class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
+    <button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
       Alistar-se
     </button>
 
-    <button onclick="abrirLogin()"
-      class="bg-blue-600 px-6 py-2 rounded text-xs font-bold uppercase">
+    <button onclick="abrirLogin()" class="bg-blue-600 px-6 py-2 rounded text-xs font-bold uppercase">
       Login
     </button>
   </div>
 
-  <button onclick="loginAdmin()" class="text-white text-xs uppercase">
-    Painel Admin
-  </button>
-
+  <button onclick="loginAdmin()">Painel Admin</button>
 </nav>
 
-<main class="max-w-6xl mx-auto p-6">
+<main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
 
-<section id="adminPanel" class="admin-only bg-zinc-900 p-6 rounded border-2 border-yellow-600 mb-6">
+<section id="adminPanel" class="admin-only space-y-6">
+<div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
+
 <h3 class="text-yellow-500 font-bold mb-3 uppercase">
-Recrutas
+Recrutas (Aprovar / Reprovar)
 </h3>
-<div id="listaEspera" class="space-y-2"></div>
+<div id="listaEspera" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
-<h3 class="text-yellow-500 font-bold mt-6 mb-3 uppercase">
-Aprovados (<span id="contagemAprovados"></span>)
+<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">
+Lista de Aprovados 
+<span id="contagemAprovados" class="text-white text-xs"></span>
 </h3>
-<div id="listaAprovados" class="space-y-2"></div>
+<div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
+
+<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">
+Sorteador de Equipes
+</h3>
+<div id="infoEquipes"></div>
+<button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">
+Sortear Times
+</button>
+<div id="equipesContainer" class="mt-2"></div>
+
+</div>
 </section>
 
-</main>
+<div class="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
+<table class="w-full text-left">
+<thead class="bg-black text-zinc-500 text-xs uppercase">
+<tr>
+<th class="p-4">Rank</th>
+<th class="p-4">Nome no COD</th>
+<th class="p-4 text-center">Partidas</th>
+<th class="p-4 text-center text-red-500">Kills</th>
+<th class="p-4 text-right admin-only">Ações</th>
+</tr>
+</thead>
+<tbody id="rankBody"></tbody>
+</table>
+</div>
 
 <!-- MODAL CADASTRO -->
-<div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden">
-<div class="bg-zinc-900 p-8 rounded border border-red-600 w-full max-w-md">
-
-<h2 class="text-xl font-bold mb-4 text-center uppercase">Alistamento</h2>
-
-<input id="regNome" placeholder="Nome no COD"
-class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-
-<input id="regEmail" placeholder="Email"
-class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-
-<input id="regFone" placeholder="Telefone"
-class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-4">
-
-<button onclick="solicitarEntrada()"
-class="w-full bg-red-600 py-3 font-bold uppercase">
-Enviar Cadastro
-</button>
-
-<button onclick="fecharModal()"
-class="w-full text-zinc-500 text-xs uppercase mt-3">
-Fechar
-</button>
-
+<div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+<div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
+<h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
+<input id="regNome" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar Cadastro</button>
+<button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
 </div>
 </div>
 
 <!-- MODAL LOGIN -->
-<div id="modalLogin" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden">
-<div class="bg-zinc-900 p-8 rounded border border-blue-600 w-full max-w-md">
-
-<h2 class="text-xl font-bold mb-4 text-center uppercase">Login</h2>
-
-<input id="loginEmail" placeholder="Email"
-class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-
-<input id="loginSenha" type="password" placeholder="Senha"
-class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-4">
-
-<button onclick="fazerLogin()"
-class="w-full bg-blue-600 py-3 font-bold uppercase">
-Entrar
-</button>
-
-<button onclick="fecharLogin()"
-class="w-full text-zinc-500 text-xs uppercase mt-3">
-Fechar
-</button>
-
+<div id="modalLogin" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+<div class="bg-zinc-900 p-8 rounded border border-blue-600 max-w-md w-full">
+<h2 class="text-2xl font-bold mb-6 text-center uppercase">Login</h2>
+<input id="loginEmail" placeholder="Email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<input id="loginSenha" type="password" placeholder="Senha" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<button onclick="fazerLogin()" class="w-full bg-blue-600 py-3 font-bold uppercase">Entrar</button>
+<button onclick="fecharLogin()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
 </div>
 </div>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } 
 from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-/* 🔥 COLOQUE AQUI SUA CONFIG REAL DO FIREBASE */
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_AUTH_DOMAIN",
-  projectId: "SEU_PROJECT_ID",
-  storageBucket: "SEU_BUCKET",
-  messagingSenderId: "SEU_MSG_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
+  authDomain: "equipeodio-715f6.firebaseapp.com",
+  projectId: "equipeodio-715f6",
+  storageBucket: "equipeodio-715f6.firebasestorage.app",
+  messagingSenderId: "399735990964",
+  appId: "1:399735990964:web:6baa2428bc49c23d7845e1"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const docRef = doc(db,"site","dados");
 
-let espera = [];
-let aprovados = [];
-let isAdmin = false;
+let aprovados=[], espera=[], listaAprovadosData=[], bannerSalvo="https://images.alphacoders.com", isAdmin=false;
 
-/* INICIALIZA */
-async function init(){
+async function inicializar(){ 
   const snap = await getDoc(docRef);
-  if(!snap.exists()){
-    await setDoc(docRef,{espera:[],aprovados:[]});
-  }
+  if(!snap.exists()) await setDoc(docRef,{rank:[],espera:[],aprovados:[],banner:bannerSalvo});
 }
-await init();
+await inicializar();
 
-/* REALTIME */
-onSnapshot(docRef,(snap)=>{
+onSnapshot(docRef, snap=>{
   if(snap.exists()){
     const d = snap.data();
-    espera = d.espera || [];
-    aprovados = d.aprovados || [];
+    aprovados=d.rank||[];
+    espera=d.espera||[];
+    listaAprovadosData=d.aprovados||[];
+    bannerSalvo=d.banner||bannerSalvo;
+    document.getElementById("bannerImg").src=bannerSalvo;
+    renderRank(); 
     renderAdmin();
   }
 });
 
 async function salvar(){
-  await setDoc(docRef,{espera,aprovados});
+  await setDoc(docRef,{
+    rank:aprovados,
+    espera:espera,
+    aprovados:listaAprovadosData,
+    banner:bannerSalvo
+  });
 }
 
-/* MODAIS */
 window.abrirModal=()=>modalCadastro.classList.remove("hidden");
 window.fecharModal=()=>modalCadastro.classList.add("hidden");
 window.abrirLogin=()=>modalLogin.classList.remove("hidden");
 window.fecharLogin=()=>modalLogin.classList.add("hidden");
 
-/* CADASTRO */
 window.solicitarEntrada=async()=>{
   const nome=regNome.value.trim();
   const email=regEmail.value.trim();
   const fone=regFone.value.trim();
 
-  if(!nome||!email||!fone){
-    alert("Preencha todos os campos");
-    return;
-  }
+  if(!nome||!email||!fone){ alert("Preencha todos os campos!"); return; }
+
+  const duplicado=[...espera,...listaAprovadosData]
+  .some(p=>p.nome===nome||p.email===email||p.fone===fone);
+  if(duplicado){ alert("Já cadastrado!"); return; }
 
   const eClan=confirm("Você é de algum clan?");
   let clan="";
   if(eClan){
-    clan=prompt("Qual nome do clan?");
-    if(!clan){ alert("Informe o nome do clan"); return; }
+    clan=prompt("Qual o nome do clan?");
+    if(!clan){ alert("Informe o nome do clan!"); return; }
   }
 
   espera.push({
@@ -188,58 +180,51 @@ window.solicitarEntrada=async()=>{
   });
 
   await salvar();
-  alert("Cadastro enviado!");
+  alert("Pedido enviado com sucesso!");
   fecharModal();
 };
 
-/* LOGIN */
 window.fazerLogin=async()=>{
   const email=loginEmail.value.trim();
   const senha=loginSenha.value.trim();
 
-  const user=aprovados.find(u=>u.email===email);
-  if(!user){
-    alert("Usuário não aprovado!");
-    return;
-  }
+  const usuario=listaAprovadosData.find(p=>p.email===email);
+  if(!usuario){ alert("Usuário não aprovado!"); return; }
 
-  if(user.primeiroAcesso){
-    const nova=prompt("Primeiro acesso! Crie senha alfanumérica (mín 6)");
-    if(!nova||nova.length<6||!/\d/.test(nova)||!/[a-zA-Z]/.test(nova)){
-      alert("Senha inválida");
-      return;
+  if(usuario.primeiroAcesso){
+    const novaSenha=prompt("Primeiro acesso! Crie senha alfanumérica (mín 6)");
+    if(!novaSenha||novaSenha.length<6||!/\d/.test(novaSenha)||!/[a-zA-Z]/.test(novaSenha)){
+      alert("Senha inválida!"); return;
     }
-    user.senha=nova;
-    user.primeiroAcesso=false;
+    usuario.senha=novaSenha;
+    usuario.primeiroAcesso=false;
     await salvar();
     alert("Senha criada! Faça login novamente.");
     return;
   }
 
-  if(user.senha!==senha){
-    alert("Senha incorreta!");
-    return;
-  }
+  if(usuario.senha!==senha){ alert("Senha incorreta!"); return; }
 
-  alert(`Bem-vindo ${user.nome} ${user.clan? "- Clan: "+user.clan:""}`);
+  alert(`Bem-vindo ${usuario.nome} ${usuario.clan? "- Clan: "+usuario.clan:""}`);
   fecharLogin();
 };
 
-/* ADMIN */
 window.loginAdmin=()=>{
-  const s=prompt("Senha Admin:");
-  if(s==="123"){
+  const senha=prompt("Senha Admin:");
+  if(senha==="123"){
     isAdmin=true;
-    document.querySelectorAll(".admin-only")
-    .forEach(e=>e.style.display="block");
+    document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block");
   }
 };
 
 window.aprovar=async(id)=>{
   const idx=espera.findIndex(p=>p.id===id);
-  if(idx===-1)return;
+  if(idx===-1) return;
   const j=espera.splice(idx,1)[0];
-  aprovados.push(j);
+
+  aprovados.push({nome:j.nome,matches:0,kills:0});
+  listaAprovadosData.push(j);
+
   await salvar();
 };
 
@@ -248,33 +233,42 @@ window.reprovar=async(id)=>{
   await salvar();
 };
 
-/* RENDER */
+function renderRank(){
+  rankBody.innerHTML="";
+  aprovados.forEach((p,i)=>{
+    rankBody.innerHTML+=`
+    <tr class="border-b border-zinc-800">
+      <td class="p-4">#${i+1}</td>
+      <td class="p-4">${p.nome}</td>
+      <td class="p-4 text-center">${p.matches}</td>
+      <td class="p-4 text-center text-red-500">${p.kills}</td>
+    </tr>`;
+  });
+}
+
 function renderAdmin(){
-  contagemAprovados.textContent=aprovados.length;
+  contagemAprovados.textContent=`(${listaAprovadosData.length})`;
 
   listaEspera.innerHTML="";
   espera.forEach(p=>{
     listaEspera.innerHTML+=`
     <div class="bg-black p-2 rounded flex justify-between">
-      <span>${p.nome}</span>
+      <div>${p.nome}</div>
       <div>
-        <button onclick="aprovar(${p.id})"
-        class="bg-green-600 px-2 py-1 text-xs">Aprovar</button>
-        <button onclick="reprovar(${p.id})"
-        class="bg-red-600 px-2 py-1 text-xs">X</button>
+        <button onclick="aprovar(${p.id})" class="bg-green-600 px-2 py-1 text-xs">Aprovar</button>
+        <button onclick="reprovar(${p.id})" class="bg-red-600 px-2 py-1 text-xs">X</button>
       </div>
     </div>`;
   });
 
   listaAprovados.innerHTML="";
-  aprovados.forEach(p=>{
+  listaAprovadosData.forEach(p=>{
     listaAprovados.innerHTML+=`
     <div class="bg-black p-2 rounded">
       ${p.nome} ${p.clan? "- Clan: "+p.clan:""}
     </div>`;
   });
 }
-
 </script>
 </body>
 </html>
