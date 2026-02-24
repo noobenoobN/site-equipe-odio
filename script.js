@@ -1,200 +1,217 @@
+/* ======================= CONFIGURAÇÃO ======================= */
 const ADMIN_PASS = "123";
 let isAdmin = false;
+let aprovados = [];
+let espera = [];
 
-let aprovados = JSON.parse(localStorage.getItem('odio_v7_rank')) || [];
-let espera = JSON.parse(localStorage.getItem('odio_v7_wait')) || [];
-let bannerSalvo = localStorage.getItem('odio_v7_banner') || "https://images.alphacoders.com";
+/* ======================= MODAL ======================= */
+function abrirModal() { document.getElementById('modalCadastro').classList.remove('hidden'); }
+function fecharModal() { document.getElementById('modalCadastro').classList.add('hidden'); }
 
-window.onload = function() {
-    document.getElementById('bannerImg').src = bannerSalvo;
+/* ======================= LOCALSTORAGE ======================= */
+function salvarDados() {
+    localStorage.setItem('odio_rank', JSON.stringify(aprovados));
+    localStorage.setItem('odio_espera', JSON.stringify(espera));
+    localStorage.setItem('odio_banner', document.getElementById('bannerImg').src);
+}
+
+function carregarDados() {
+    aprovados = JSON.parse(localStorage.getItem('odio_rank')) || [];
+    espera = JSON.parse(localStorage.getItem('odio_espera')) || [];
+    const banner = localStorage.getItem('odio_banner');
+    if(banner) document.getElementById('bannerImg').src = banner;
+
     renderRank();
-    if (isAdmin) renderAdmin();
-};
-
-// ---------------- MODAL ----------------
-function abrirModal() {
-    document.getElementById('modalCadastro').classList.remove('hidden');
-}
-function fecharModal() {
-    document.getElementById('modalCadastro').classList.add('hidden');
+    renderAdmin();
 }
 
-// ---------------- ALISTAMENTO ----------------
-function solicitarEntrada() {
-    const nome = regNome.value.trim();
-    const email = regEmail.value.trim();
-    const fone = regFone.value.trim();
+/* ======================= BACKUP ======================= */
+function exportarBackup() {
+    const backup = {
+        rank: aprovados,
+        espera: espera,
+        banner: document.getElementById('bannerImg').src
+    };
 
-    if (!nome || !email || !fone) {
-        alert("⚠️ Preencha todos os campos!");
-        return;
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "backup_equipe_odio.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    alert("✅ Backup exportado!");
+}
+
+function importarBackup(input) {
+    if(input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const backup = JSON.parse(e.target.result);
+                aprovados = backup.rank || [];
+                espera = backup.espera || [];
+                if(backup.banner) document.getElementById('bannerImg').src = backup.banner;
+                salvarDados();
+                renderRank();
+                renderAdmin();
+                alert("✅ Backup importado com sucesso!");
+            } catch(err) {
+                alert("❌ Arquivo inválido!");
+            }
+        };
+        reader.readAsText(input.files[0]);
     }
-
-    espera.push({ nome, email, fone, id: Date.now() });
-    salvarDados();
-
-    alert("✅ Ficha enviada!");
-    regNome.value = "";
-    regEmail.value = "";
-    regFone.value = "";
-    fecharModal();
 }
 
-// ---------------- ADMIN ----------------
+/* ======================= ALISTAMENTO ======================= */
+function solicitarEntrada() {
+    const nome = document.getElementById('regNome').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const fone = document.getElementById('regFone').value.trim();
+
+    if (!nome || !email || !fone) return alert("⚠️ Preencha todos os campos!");
+
+    const novoRecruta = { nome, email, fone, id: Date.now() };
+    espera.push(novoRecruta);
+    salvarDados();
+    fecharModal();
+    if(isAdmin) renderAdmin();
+}
+
+/* ======================= ADMIN ======================= */
 function toggleAdmin() {
-    const senha = prompt("DIGITE A SENHA:");
-    if (senha === ADMIN_PASS) {
+    const senha = prompt("DIGITE A SENHA DE COMANDO:");
+    if(senha === ADMIN_PASS){
         isAdmin = true;
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
-        btnLogin.classList.add('hidden');
-        btnLogout.classList.remove('hidden');
+        document.querySelectorAll('.admin-only').forEach(el=>el.style.display='block');
+        document.getElementById('btnLogin').classList.add('hidden');
+        document.getElementById('btnLogout').classList.remove('hidden');
         renderAdmin();
         renderRank();
-    } else if (senha !== null) {
-        alert("❌ SENHA INCORRETA!");
+    } else if(senha!==null) alert("❌ SENHA INCORRETA!");
+}
+
+/* ======================= BANNER ======================= */
+function updateBanner() {
+    const url = document.getElementById('newBannerUrl').value;
+    if(url){
+        document.getElementById('bannerImg').src = url;
+        salvarDados();
+        alert("🖼️ Banner atualizado!");
     }
 }
 
-// ---------------- BANNER ----------------
-function setBanner(src) {
-    bannerImg.src = src;
-    localStorage.setItem('odio_v7_banner', src);
+function uploadFoto(input){
+    if(input.files && input.files[0]){
+        const reader = new FileReader();
+        reader.onload = (e)=> {
+            document.getElementById('bannerImg').src = e.target.result;
+            salvarDados();
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
 }
 
-function updateBanner() {
-    const url = newBannerUrl.value;
-    if (url) setBanner(url);
-}
-
-function uploadFoto(input) {
-    const reader = new FileReader();
-    reader.onload = e => setBanner(e.target.result);
-    reader.readAsDataURL(input.files[0]);
-}
-
-// ---------------- RANK ----------------
+/* ======================= RANKING ======================= */
 function renderRank() {
-    const tbody = rankBody;
-    tbody.innerHTML = "";
+    const tbody = document.getElementById('rankBody');
+    tbody.innerHTML = '';
+    aprovados.sort((a,b)=> b.kills - a.kills);
 
-    aprovados.sort((a, b) => b.kills - a.kills);
-
-    aprovados.forEach((p, i) => {
+    aprovados.forEach((p,i)=>{
         tbody.innerHTML += `
-        <tr class="border-b border-zinc-800">
-            <td class="p-4">#${i+1}</td>
-            <td class="p-4">${p.name}</td>
-            <td class="p-4 text-center">${p.matches}</td>
-            <td class="p-4 text-center text-red-500">${p.kills}</td>
-            <td class="p-4 text-right admin-only" style="display:${isAdmin ? 'block':'none'}">
-                <button onclick="addScore('${p.name}')" class="bg-blue-600 px-2 py-1 text-xs rounded">+Kill</button>
-                <button onclick="removerDoRank('${p.name}')" class="text-red-500 ml-2">X</button>
+        <tr class="border-b border-zinc-800 hover:bg-zinc-800 transition">
+            <td class="p-4 font-bold text-zinc-600 italic">#${i+1}</td>
+            <td class="p-4 font-bold uppercase">${p.name}</td>
+            <td class="p-4 text-center text-zinc-400">${p.matches}</td>
+            <td class="p-4 text-center text-red-500 font-bold font-mono">${p.kills}</td>
+            <td class="p-4 text-right admin-only">
+                <button onclick="addScore(${p.id})" class="bg-blue-600 px-2 py-1 rounded text-[9px] font-bold text-white shadow-lg">+ KILLS</button>
+                <button onclick="removerDoRank(${p.id})" class="text-zinc-600 hover:text-red-500 ml-2">X</button>
             </td>
         </tr>`;
     });
 }
 
-function addScore(nome) {
-    const k = prompt("Quantas kills?");
-    const idx = aprovados.findIndex(p => p.name === nome);
-    aprovados[idx].kills += parseInt(k) || 0;
-    aprovados[idx].matches += 1;
+function addScore(id) {
+    const jogador = aprovados.find(p=>p.id===id);
+    const k = parseInt(prompt(`Quantas kills ${jogador.name} fez?`, "0")) || 0;
+    jogador.kills += k;
+    jogador.matches += 1;
     salvarDados();
+    renderRank();
 }
 
-function removerDoRank(nome) {
-    if (confirm("Remover jogador?")) {
-        aprovados = aprovados.filter(p => p.name !== nome);
+function removerDoRank(id) {
+    if(confirm("Expulsar esse soldado?")){
+        aprovados = aprovados.filter(p=>p.id!==id);
         salvarDados();
+        renderRank();
     }
 }
 
-// ---------------- RECRUTAS ----------------
-function aprovar(id) {
-    const idx = espera.findIndex(p => p.id === id);
-    if (idx > -1) {
-        const j = espera.splice(idx, 1)[0];
-        aprovados.push({ name: j.nome, matches: 0, kills: 0 });
-        salvarDados();
-    }
-}
-
-function reprovar(id) {
-    espera = espera.filter(p => p.id !== id);
-    salvarDados();
-}
-
+/* ======================= RECRUTAS ======================= */
 function renderAdmin() {
-    if (!listaEspera) return;
-
-    listaEspera.innerHTML = espera.length === 0
-        ? '<p class="text-zinc-700 text-xs">Sem solicitações</p>'
-        : espera.map(p => `
-        <div class="bg-black p-2 m-1 flex justify-between">
-            <span>${p.nome}</span>
-            <div>
-                <button onclick="aprovar(${p.id})" class="text-green-500">V</button>
-                <button onclick="reprovar(${p.id})" class="text-red-500 ml-2">X</button>
+    const lista = document.getElementById('listaEspera');
+    if(!lista) return;
+    lista.innerHTML = espera.length===0 ? '<p class="text-zinc-700 text-[10px] italic p-2">Sem solicitações...</p>' :
+    espera.map(p=>`
+        <div class="bg-black/50 p-2 rounded flex justify-between items-center border border-zinc-800 m-1 border-l-2 border-yellow-600">
+            <div class="text-[10px]">
+                <b class="text-white uppercase font-bold italic">${p.nome}</b><br>
+                <span class="text-zinc-500">${p.fone}</span>
+            </div>
+            <div class="flex gap-1">
+                <button onclick="aprovar(${p.id})" class="bg-green-700 px-2 py-1 rounded text-[9px] font-bold">V</button>
+                <button onclick="reprovar(${p.id})" class="bg-zinc-800 px-2 py-1 rounded text-[9px]">X</button>
             </div>
         </div>
     `).join('');
 }
 
-// ---------------- SALVAR ----------------
-function salvarDados() {
-    localStorage.setItem('odio_v7_rank', JSON.stringify(aprovados));
-    localStorage.setItem('odio_v7_wait', JSON.stringify(espera));
-    renderRank();
-    renderAdmin();
+function aprovar(id){
+    const index = espera.findIndex(p=>p.id===id);
+    if(index>-1){
+        const j = espera.splice(index,1)[0];
+        aprovados.push({name:j.nome,matches:0,kills:0,deaths:0,id:Date.now()});
+        salvarDados();
+        renderRank();
+        renderAdmin();
+    }
 }
 
-// ==================================================
-// 🔥 BACKUP EM ARQUIVO (NOVO)
-// ==================================================
-
-function exportarDados() {
-    const dados = {
-        rank: aprovados,
-        espera: espera,
-        banner: localStorage.getItem('odio_v7_banner')
-    };
-
-    const blob = new Blob(
-        [JSON.stringify(dados, null, 2)],
-        { type: "application/json" }
-    );
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "backup_odio.json";
-    a.click();
-    URL.revokeObjectURL(url);
-
-    alert("✅ Backup baixado!");
+function reprovar(id){
+    if(confirm("Remover solicitação?")){
+        espera = espera.filter(p=>p.id!==id);
+        salvarDados();
+        renderAdmin();
+    }
 }
 
-function importarDados(input) {
-    const file = input.files[0];
-    if (!file) return;
+/* ======================= SORTER ======================= */
+function sortearEquipes(){
+    if(aprovados.length<2) return alert("Precisa de pelo menos 2 soldados!");
+    const lista = [...aprovados].sort(()=>Math.random()-0.5);
+    const metade = Math.ceil(lista.length/2);
+    const timeA = lista.slice(0,metade);
+    const timeB = lista.slice(metade);
+    let msg = "🔴 TIME ALPHA:\n"+timeA.map(p=>"- "+p.name).join("\n")+
+              "\n\n🔵 TIME BRAVO:\n"+timeB.map(p=>"- "+p.name).join("\n");
+    alert(msg);
+}
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const dados = JSON.parse(e.target.result);
+/* ======================= MANUAL ======================= */
+function adicionarJogadorManual(){
+    const nome = prompt("Nome do Soldado para adicionar ao RANK:");
+    if(nome){
+        aprovados.push({name:nome,matches:0,kills:0,deaths:0,id:Date.now()});
+        salvarDados();
+        renderRank();
+    }
+}
 
-            aprovados = dados.rank || [];
-            espera = dados.espera || [];
-            bannerSalvo = dados.banner || bannerSalvo;
-
-            salvarDados();
-            bannerImg.src = bannerSalvo;
-
-            alert("✅ Backup restaurado!");
-        } catch {
-            alert("❌ Arquivo inválido!");
-        }
-    };
-
-    reader.readAsText(file);
+/* ======================= INICIALIZAÇÃO ======================= */
+window.onload = function(){
+    carregarDados();
 }
