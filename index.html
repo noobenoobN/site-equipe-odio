@@ -9,35 +9,24 @@
 <style>
 body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
 .admin-only { display: none; }
-button{ cursor:pointer; }
 .equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
+button{ cursor:pointer; }
 #infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0a0a0a; }
-::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #ff0000; }
 </style>
 </head>
 <body class="pb-10">
 
-<!-- BANNER -->
 <section class="relative w-full h-[300px] md:h-[400px] bg-zinc-900 border-b-4 border-red-600">
 <img id="bannerImg" src="https://images.alphacoders.com" class="w-full h-full object-cover opacity-60">
 </section>
 
-<!-- NAVEGAÇÃO -->
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
 <button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
-<button id="btnLoginAdmin" onclick="mostrarSenhaAdmin()" class="text-zinc-300 text-xs uppercase font-bold">Administrador</button>
-<div id="adminSenhaDiv" class="hidden flex gap-2 items-center">
-<input type="password" id="inputSenhaAdmin" placeholder="Senha" class="bg-black border border-zinc-700 p-2 rounded text-white text-xs">
-<button onclick="loginAdmin()" class="bg-yellow-600 px-3 py-1 text-xs font-bold">Entrar</button>
-</div>
+<button onclick="loginAdmin()">Painel Admin</button>
 </nav>
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
 
-<!-- PAINEL ADMIN -->
 <section id="adminPanel" class="admin-only space-y-6">
 <div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
 <h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas (Aprovar / Reprovar)</h3>
@@ -47,13 +36,12 @@ button{ cursor:pointer; }
 <div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
 <h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Sorteador de Equipes</h3>
-<div id="infoEquipes"></div>
+<div id="infoEquipes"></div> <!-- Aqui aparecerá a quantidade de equipes e jogadores -->
 <button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">Sortear Times</button>
 <div id="equipesContainer" class="mt-2"></div>
 </div>
 </section>
 
-<!-- RANK -->
 <div class="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
 <table class="w-full text-left">
 <thead class="bg-black text-zinc-500 text-xs uppercase">
@@ -69,25 +57,14 @@ button{ cursor:pointer; }
 </table>
 </div>
 
-<!-- MODAL CADASTRO/LOGIN -->
 <div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
 <div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
-<h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento / Entrar</h2>
-
-<!-- CADASTRO -->
+<h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
 <input id="regNome" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
 <input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
 <input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase mb-2">Enviar Cadastro</button>
-
-<hr class="border-zinc-700 my-2">
-
-<!-- LOGIN APROVADOS -->
-<input id="loginNomeModal" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<input id="loginSenhaModal" type="password" placeholder="Senha" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<button onclick="loginJogadorModal()" class="w-full bg-blue-600 py-3 font-bold uppercase">Entrar</button>
-
-<button onclick="fecharModalCadastro()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
+<button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar Cadastro</button>
+<button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
 </div>
 </div>
 
@@ -96,12 +73,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebas
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 const firebaseConfig = {
-apiKey: "AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
-authDomain: "equipeodio-715f6.firebaseapp.com",
-projectId: "equipeodio-715f6",
-storageBucket: "equipeodio-715f6.firebasestorage.app",
-messagingSenderId: "399735990964",
-appId: "1:399735990964:web:6baa2428bc49c23d7845e1"
+  apiKey: "AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
+  authDomain: "equipeodio-715f6.firebaseapp.com",
+  projectId: "equipeodio-715f6",
+  storageBucket: "equipeodio-715f6.firebasestorage.app",
+  messagingSenderId: "399735990964",
+  appId: "1:399735990964:web:6baa2428bc49c23d7845e1"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -117,158 +94,132 @@ async function inicializar(){
 await inicializar();
 
 onSnapshot(docRef, snap=>{
-if(snap.exists()){
-  const d = snap.data();
-  aprovados=d.rank||[];
-  espera=d.espera||[];
-  listaAprovadosData=d.aprovados||[];
-  bannerSalvo=d.banner||bannerSalvo;
-  document.getElementById("bannerImg").src=bannerSalvo;
-  renderRank(); renderAdmin();
-}});
+  if(snap.exists()){
+    const d = snap.data();
+    aprovados=d.rank||[];
+    espera=d.espera||[];
+    listaAprovadosData=d.aprovados||[];
+    bannerSalvo=d.banner||bannerSalvo;
+    document.getElementById("bannerImg").src=bannerSalvo;
+    renderRank(); renderAdmin();
+  }
+});
 
 async function salvar(){ await setDoc(docRef,{rank:aprovados,espera:espera,aprovados:listaAprovadosData,banner:bannerSalvo}); }
 
 window.abrirModal = ()=> modalCadastro.classList.remove("hidden");
-window.fecharModalCadastro = ()=> modalCadastro.classList.add("hidden");
+window.fecharModal = ()=> modalCadastro.classList.add("hidden");
 
 window.solicitarEntrada = async ()=>{
-const nome=regNome.value.trim();
-const email=regEmail.value.trim();
-const fone=regFone.value.trim();
-if(!nome||!email||!fone){ alert("Preencha todos os campos!"); return; }
-const duplicado=[...espera,...listaAprovadosData].some(p=>p.nome===nome || p.email===email || p.fone===fone);
-if(duplicado){ alert("Já cadastrado!"); return; }
-espera.push({nome,email,fone,id:Date.now()});
-await salvar();
-alert("Pedido enviado com sucesso! Aguarde aprovação do admin.");
-regNome.value=""; regEmail.value=""; regFone.value="";
-fecharModalCadastro();
+  const nome=regNome.value.trim();
+  const email=regEmail.value.trim();
+  const fone=regFone.value.trim();
+  if(!nome||!email||!fone){ alert("Preencha todos os campos!"); return; }
+
+  const duplicado=[...espera,...listaAprovadosData].some(p=>p.nome===nome || p.email===email || p.fone===fone);
+  if(duplicado){ alert("Já cadastrado!"); return; }
+
+  const senha=prompt("Primeiro acesso! Crie uma senha alfanumérica (mínimo 6 dígitos):");
+  if(!senha||senha.length<6||!/\d/.test(senha)||!/[a-zA-Z]/.test(senha)){ alert("Senha inválida"); return; }
+
+  espera.push({nome,email,fone,senha,id:Date.now()});
+  await salvar();
+  alert("Pedido enviado com sucesso!");
+  regNome.value=""; regEmail.value=""; regFone.value="";
+  fecharModal();
 };
 
-window.mostrarSenhaAdmin = ()=> document.getElementById("adminSenhaDiv").classList.toggle("hidden");
-
 window.loginAdmin = ()=>{
-const senha = document.getElementById("inputSenhaAdmin").value.trim();
-if(senha==="123"){ 
-isAdmin=true; 
-document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block"); 
-document.getElementById("adminSenhaDiv").classList.add("hidden");
-document.getElementById("btnLoginAdmin").classList.add("hidden");
-}else if(senha!==""){ alert("Senha incorreta!"); }
+  const senha = prompt("Senha Admin:");
+  if(senha==="123"){ isAdmin=true; document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block"); }
+  else if(senha!==null) alert("Senha incorreta!");
 };
 
 window.aprovar = async (id)=>{
-const idx=espera.findIndex(p=>p.id===id);
-if(idx===-1) return;
-const j=espera.splice(idx,1)[0];
-const novo={nome:j.nome,matches:0,kills:0};
-aprovados.push(novo);
-listaAprovadosData.push({nome:j.nome,fone:j.fone,email:j.email,senha:null});
-await salvar(); renderRank(); renderAdmin();
+  const idx=espera.findIndex(p=>p.id===id);
+  if(idx===-1) return;
+  const j=espera.splice(idx,1)[0];
+  const novo={nome:j.nome,matches:0,kills:0};
+  aprovados.push(novo);
+  listaAprovadosData.push({nome:j.nome,fone:j.fone,email:j.email,senha:j.senha});
+  await salvar(); renderRank(); renderAdmin();
 };
 
 window.reprovar = async (id)=>{ espera=espera.filter(p=>p.id!==id); await salvar(); renderAdmin(); };
 window.removerAprovado = async (email)=>{ 
-listaAprovadosData=listaAprovadosData.filter(p=>p.email!==email); 
-aprovados=aprovados.filter(p=>p.nome!==listaAprovadosData.find(a=>a.email===email)?.nome); 
-await salvar(); renderRank(); renderAdmin(); 
+  listaAprovadosData=listaAprovadosData.filter(p=>p.email!==email); 
+  aprovados=aprovados.filter(p=>p.nome!==listaAprovadosData.find(a=>a.email===email)?.nome); 
+  await salvar(); renderRank(); renderAdmin(); 
 };
 
 window.addScore = async (nome)=>{ const k=parseInt(prompt("Kills","0"))||0; const idx=aprovados.findIndex(p=>p.nome===nome); if(idx>-1){ aprovados[idx].matches+=1; aprovados[idx].kills+=k; await salvar(); renderRank(); } };
 window.removerDoRank = async (nome)=>{ aprovados=aprovados.filter(p=>p.nome!==nome); listaAprovadosData=listaAprovadosData.filter(p=>p.nome!==nome); await salvar(); renderRank(); renderAdmin(); };
 
 window.sortearEquipes = ()=>{
-const totalJogadores = aprovados.length;
-if(totalJogadores < 2){ alert("Precisa de pelo menos 2 jogadores"); return; }
-let numEquipes = totalJogadores < 8 ? 2 : Math.min(totalJogadores, 4);
-const lista = [...aprovados].sort(() => Math.random()-0.5);
-const equipes = Array.from({length:numEquipes}, ()=>[]);
-lista.forEach((player,index)=>equipes[index % numEquipes].push(player.nome));
+  const totalJogadores = aprovados.length;
+  if(totalJogadores < 2){ alert("Precisa de pelo menos 2 jogadores"); return; }
 
-// MOSTRA INFO DIRETO NA PÁGINA
-const infoDiv = document.getElementById("infoEquipes");
-infoDiv.textContent = `Total de jogadores: ${totalJogadores} | Número de equipes: ${numEquipes}`;
+  let numEquipes = totalJogadores < 8 ? 2 : parseInt(prompt(`Quantas equipes criar?`));
+  if(isNaN(numEquipes) || numEquipes<1) numEquipes=1;
+  if(numEquipes>totalJogadores) numEquipes = totalJogadores;
 
-const cores = ["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400"];
-const container = document.getElementById("equipesContainer");
-container.innerHTML="";
-equipes.forEach((eq,i)=>{
-const div = document.createElement("div");
-div.className = `equipe ${cores[i % cores.length]} p-2 mb-2`;
-div.textContent = `Equipe ${i+1}: ${eq.join(", ")}`;
-container.appendChild(div);
-});
+  const lista = [...aprovados].sort(() => Math.random()-0.5);
+  const equipes = Array.from({length:numEquipes}, ()=>[]);
+  lista.forEach((player,index)=>equipes[index % numEquipes].push(player.nome));
+
+  // MOSTRA INFO DIRETO NA PÁGINA
+  const infoDiv = document.getElementById("infoEquipes");
+  infoDiv.textContent = `Total de jogadores: ${totalJogadores} | Número de equipes: ${numEquipes}`;
+
+  const cores = ["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400","bg-purple-500","bg-orange-400"];
+  const container = document.getElementById("equipesContainer");
+  container.innerHTML="";
+  equipes.forEach((eq,i)=>{
+    const div = document.createElement("div");
+    div.className = `equipe ${cores[i % cores.length]} p-2 mb-2`;
+    div.textContent = `Equipe ${i+1}: ${eq.join(", ")}`;
+    container.appendChild(div);
+  });
 };
 
 function renderRank(){
-rankBody.innerHTML="";
-aprovados.forEach((p,i)=>{
-rankBody.innerHTML+=`<tr class="border-b border-zinc-800">
-<td class="p-4">#${i+1}</td>
-<td class="p-4">${p.nome}</td>
-<td class="p-4 text-center">${p.matches}</td>
-<td class="p-4 text-center text-red-500">${p.kills}</td>
-<td class="p-4 text-right admin-only" style="display:${isAdmin?'block':'none'}">
-<button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">+K</button>
-<button onclick="removerDoRank('${p.nome}')" class="text-red-500 ml-2">X</button>
-</td>
-</tr>`;
-});
+  rankBody.innerHTML="";
+  aprovados.forEach((p,i)=>{
+    rankBody.innerHTML+=`<tr class="border-b border-zinc-800">
+      <td class="p-4">#${i+1}</td>
+      <td class="p-4">${p.nome}</td>
+      <td class="p-4 text-center">${p.matches}</td>
+      <td class="p-4 text-center text-red-500">${p.kills}</td>
+      <td class="p-4 text-right admin-only" style="display:${isAdmin?'block':'none'}">
+        <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">+K</button>
+        <button onclick="removerDoRank('${p.nome}')" class="text-red-500 ml-2">X</button>
+      </td>
+    </tr>`;
+  });
 }
 
 function renderAdmin(){
-contagemAprovados.textContent=`(${listaAprovadosData.length} jogador(es))`;
-listaEspera.innerHTML="";
-espera.forEach(p=>{
-listaEspera.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
-<div>${p.nome} - ${p.fone}</div>
-<div>
-<button onclick="aprovar(${p.id})" class="bg-green-600 px-2 py-1 text-xs">V</button>
-<button onclick="reprovar(${p.id})" class="bg-red-600 px-2 py-1 text-xs">X</button>
-</div>
-</div>`;
-});
-listaAprovados.innerHTML="";
-listaAprovadosData.forEach(p=>{
-listaAprovados.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
-<span>${p.nome} - ${p.fone}</span>
-<button onclick="removerAprovado('${p.email}')" class="bg-red-600 px-2 py-1 text-xs">Remover</button>
-</div>`;
-});
-}
+  contagemAprovados.textContent=`(${listaAprovadosData.length} jogador(es))`;
 
-// LOGIN JOGADOR
-window.loginJogadorModal = async ()=>{
-const nome = loginNomeModal.value.trim();
-const senha = loginSenhaModal.value.trim();
-const aprovado = listaAprovadosData.find(p=>p.nome===nome);
-if(!aprovado){ alert("Você ainda não foi aprovado!"); return; }
+  listaEspera.innerHTML="";
+  espera.forEach(p=>{
+    listaEspera.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
+      <div>${p.nome} - ${p.fone}</div>
+      <div>
+        <button onclick="aprovar(${p.id})" class="bg-green-600 px-2 py-1 text-xs">V</button>
+        <button onclick="reprovar(${p.id})" class="bg-red-600 px-2 py-1 text-xs">X</button>
+      </div>
+    </div>`;
+  });
 
-// PRIMEIRO ACESSO
-if(!aprovado.senha){
-let novaSenha = prompt("Primeiro acesso! Crie uma senha alfanumérica (mínimo 6 dígitos):");
-if(!novaSenha || novaSenha.length<6 || !/\d/.test(novaSenha) || !/[a-zA-Z]/.test(novaSenha)){
-alert("Senha inválida!"); return;
+  listaAprovados.innerHTML="";
+  listaAprovadosData.forEach(p=>{
+    listaAprovados.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
+      <span>${p.nome} - ${p.fone}</span>
+      <button onclick="removerAprovado('${p.email}')" class="bg-red-600 px-2 py-1 text-xs">Remover</button>
+    </div>`;
+  });
 }
-aprovado.senha = novaSenha;
-let clanSim = confirm("Você é de clan?");
-if(clanSim){
-let clanNome = prompt("Qual o nome do clan?");
-aprovado.clan = clanNome || "";
-}else{ aprovado.clan = ""; }
-await salvar();
-alert("Cadastro completo! Agora você pode entrar com sua senha.");
-loginNomeModal.value = ""; loginSenhaModal.value = "";
-return;
-}
-
-// LOGIN NORMAL
-if(senha !== aprovado.senha){ alert("Senha incorreta!"); return; }
-alert(`Bem-vindo ${aprovado.nome}${aprovado.clan ? " do clan "+aprovado.clan : ""}!`);
-loginNomeModal.value = ""; loginSenhaModal.value = "";
-fecharModalCadastro();
-};
 </script>
 </body>
 </html>
