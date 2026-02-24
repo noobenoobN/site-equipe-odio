@@ -6,9 +6,14 @@
 <title>Equipe [ODIO] - Oficial</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+
 <style>
 body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
+
+/* ADMIN CONTROLADO POR CLASSE NO BODY */
 .admin-only { display: none; }
+.admin-active .admin-only { display: revert; }
+
 .equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
 button{ cursor:pointer; }
 #infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
@@ -33,9 +38,9 @@ Login
 </button>
 </div>
 
-<div class="flex gap-3 items-center">
+<div class="flex gap-3">
 <button onclick="loginAdmin()">Painel Admin</button>
-<button id="btnLogoutAdmin" onclick="logoutAdmin()" class="hidden text-red-600 text-xs uppercase font-bold">
+<button onclick="logoutAdmin()" class="text-red-600 text-xs uppercase font-bold">
 Sair
 </button>
 </div>
@@ -80,9 +85,8 @@ Sortear Times
 </table>
 </div>
 
-<!-- MODAIS continuam iguais -->
-
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
@@ -129,39 +133,111 @@ async function salvar(){
   });
 }
 
-/* LOGIN ADMIN */
+/* ===== ADMIN ===== */
+
 window.loginAdmin = ()=>{
   const senha = prompt("Senha Admin:");
   if(senha==="123"){
     isAdmin=true;
-    document.querySelectorAll(".admin-only")
-    .forEach(e=>e.style.display="block");
-
-    document.getElementById("btnLogoutAdmin")
-    .classList.remove("hidden");
-
-    renderRank();
-    renderAdmin();
+    document.body.classList.add("admin-active");
+    alert("Admin ativado");
   } else if(senha!==null){
     alert("Senha incorreta!");
   }
 };
 
-/* SAIR ADMIN */
 window.logoutAdmin = ()=>{
   isAdmin=false;
-
-  document.querySelectorAll(".admin-only")
-  .forEach(e=>e.style.display="none");
-
-  document.getElementById("btnLogoutAdmin")
-  .classList.add("hidden");
-
-  renderRank();
-  renderAdmin();
+  document.body.classList.remove("admin-active");
+  alert("Admin desativado");
 };
 
-/* RESTO DO SEU SISTEMA CONTINUA IGUAL */
+/* ===== RESTANTE DO SISTEMA (INALTERADO) ===== */
+
+window.aprovar = async (id)=>{
+  const idx=espera.findIndex(p=>p.id===id);
+  if(idx===-1) return;
+  const j=espera.splice(idx,1)[0];
+  const novo={nome:j.nome,matches:0,kills:0};
+  aprovados.push(novo);
+  listaAprovadosData.push(j);
+  await salvar(); renderRank(); renderAdmin();
+};
+
+window.reprovar = async (id)=>{
+  espera=espera.filter(p=>p.id!==id);
+  await salvar(); renderAdmin();
+};
+
+window.addScore = async (nome)=>{
+  const k=parseInt(prompt("Kills","0"))||0;
+  const idx=aprovados.findIndex(p=>p.nome===nome);
+  if(idx>-1){
+    aprovados[idx].matches+=1;
+    aprovados[idx].kills+=k;
+    await salvar(); renderRank();
+  }
+};
+
+window.removerDoRank = async (nome)=>{
+  aprovados=aprovados.filter(p=>p.nome!==nome);
+  listaAprovadosData=listaAprovadosData.filter(p=>p.nome!==nome);
+  await salvar(); renderRank(); renderAdmin();
+};
+
+window.sortearEquipes = ()=>{
+  const totalJogadores = aprovados.length;
+  if(totalJogadores < 2){ alert("Precisa de pelo menos 2 jogadores"); return; }
+
+  let numEquipes = totalJogadores < 8 ? 2 : parseInt(prompt("Quantas equipes criar?"));
+  if(isNaN(numEquipes) || numEquipes<1) numEquipes=1;
+  if(numEquipes>totalJogadores) numEquipes = totalJogadores;
+
+  const lista = [...aprovados].sort(() => Math.random()-0.5);
+  const equipes = Array.from({length:numEquipes}, ()=>[]);
+  lista.forEach((player,index)=>equipes[index % numEquipes].push(player.nome));
+
+  infoEquipes.textContent = `Total de jogadores: ${totalJogadores} | Número de equipes: ${numEquipes}`;
+
+  equipesContainer.innerHTML="";
+  equipes.forEach((eq,i)=>{
+    const div = document.createElement("div");
+    div.className = "equipe bg-red-500 p-2 mb-2";
+    div.textContent = `Equipe ${i+1}: ${eq.join(", ")}`;
+    equipesContainer.appendChild(div);
+  });
+};
+
+function renderRank(){
+  rankBody.innerHTML="";
+  aprovados.forEach((p,i)=>{
+    rankBody.innerHTML+=`
+    <tr class="border-b border-zinc-800">
+      <td class="p-4">#${i+1}</td>
+      <td class="p-4">${p.nome}</td>
+      <td class="p-4 text-center">${p.matches}</td>
+      <td class="p-4 text-center text-red-500">${p.kills}</td>
+      <td class="p-4 text-right admin-only">
+        <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">+K</button>
+        <button onclick="removerDoRank('${p.nome}')" class="text-red-500 ml-2">X</button>
+      </td>
+    </tr>`;
+  });
+}
+
+function renderAdmin(){
+  listaEspera.innerHTML="";
+  espera.forEach(p=>{
+    listaEspera.innerHTML+=`
+    <div class="bg-black p-2 rounded flex justify-between">
+      <div>${p.nome} - ${p.fone}</div>
+      <div>
+        <button onclick="aprovar(${p.id})" class="bg-green-600 px-2 py-1 text-xs">V</button>
+        <button onclick="reprovar(${p.id})" class="bg-red-600 px-2 py-1 text-xs">X</button>
+      </div>
+    </div>`;
+  });
+}
 
 </script>
 </body>
