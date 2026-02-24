@@ -16,6 +16,8 @@
   ::-webkit-scrollbar-track { background: #0a0a0a; }
   ::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: #ff0000; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f1f1f; color: #fff; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: opacity 0.4s; }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body class="pb-10">
@@ -103,6 +105,9 @@
   </div>
 </div>
 
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
@@ -122,7 +127,7 @@ const docRef = doc(db, "site", "dados");
 
 let aprovados = [];
 let espera = [];
-window.listaAprovadosData = [];
+let listaAprovadosData = [];
 let bannerSalvo = "https://images.alphacoders.com";
 let isAdmin = false;
 
@@ -137,14 +142,14 @@ onSnapshot(docRef, snap=>{
     const d = snap.data();
     aprovados = d.rank || [];
     espera = d.espera || [];
-    window.listaAprovadosData = d.aprovados || [];
+    listaAprovadosData = d.aprovados || [];
     bannerSalvo = d.banner || bannerSalvo;
     document.getElementById("bannerImg").src = bannerSalvo;
     renderRank(); renderAdmin();
   }
 });
 
-async function salvar() { await setDoc(docRef, { rank: aprovados, espera: espera, aprovados: window.listaAprovadosData, banner: bannerSalvo }); }
+async function salvar() { await setDoc(docRef, { rank: aprovados, espera: espera, aprovados: listaAprovadosData, banner: bannerSalvo }); }
 
 // MODAL
 window.abrirModal = () => modalCadastro.classList.remove("hidden");
@@ -152,21 +157,27 @@ window.fecharModal = () => modalCadastro.classList.add("hidden");
 window.abrirModalBanner = () => modalBanner.classList.remove("hidden");
 window.fecharModalBanner = () => modalBanner.classList.add("hidden");
 
+// TOAST
+function mostrarToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=> t.classList.remove("show"),3000);
+}
+
 // CADASTRO COM DUPLICADOS BLOQUEADOS
 window.solicitarEntrada = async () => {
   const nome = regNome.value.trim();
   const email = regEmail.value.trim();
   const fone = regFone.value.trim();
-  if(!nome||!email||!fone){ alert("⚠️ Preencha todos os campos!"); return; }
+  if(!nome||!email||!fone){ mostrarToast("⚠️ Preencha todos os campos!"); return; }
 
-  const snap = await getDoc(docRef);
-  const data = snap.exists()? snap.data() : {espera:[], aprovados:[]};
-  const duplicado = [...data.espera, ...data.aprovados].some(p => p.nome===nome || p.fone===fone || p.email===email);
-  if(duplicado){ alert("❌ Este nome, telefone ou email já foi cadastrado!"); return; }
+  const duplicado = [...espera, ...listaAprovadosData].some(p => p.nome===nome || p.fone===fone || p.email===email);
+  if(duplicado){ mostrarToast("❌ Já cadastrado!"); return; }
 
   espera.push({nome,email,fone,id:Date.now()});
   await salvar();
-  alert("✅ Pedido enviado com sucesso!");
+  mostrarToast("✅ Pedido enviado com sucesso!");
   regNome.value=""; regEmail.value=""; regFone.value="";
   fecharModal();
 };
@@ -177,14 +188,14 @@ window.aprovar = async (id)=>{
   if(idx===-1) return;
   const j = espera.splice(idx,1)[0];
   aprovados.push({nome:j.nome,matches:0,kills:0});
-  window.listaAprovadosData.push({nome:j.nome,fone:j.fone,email:j.email});
+  listaAprovadosData.push({nome:j.nome,fone:j.fone,email:j.email});
   await salvar();
 };
 window.reprovar = async (id)=>{ espera=espera.filter(p=>p.id!==id); await salvar(); };
 window.removerAprovado = async (email)=>{
   if(!confirm("Remover jogador da lista de aprovados?")) return;
-  window.listaAprovadosData = window.listaAprovadosData.filter(p=>p.email!==email);
-  aprovados = aprovados.filter(p=>p.nome!==window.listaAprovadosData.find(x=>x.email===email)?.nome);
+  listaAprovadosData = listaAprovadosData.filter(p=>p.email!==email);
+  aprovados = aprovados.filter(p=>p.nome!==email); // sincroniza com rank
   await salvar();
 };
 window.addScore = async (nome)=>{
@@ -194,13 +205,13 @@ window.addScore = async (nome)=>{
 };
 window.removerDoRank = async (nome)=>{
   aprovados = aprovados.filter(p=>p.nome!==nome);
-  window.listaAprovadosData = window.listaAprovadosData.filter(p=>p.nome!==nome);
+  listaAprovadosData = listaAprovadosData.filter(p=>p.nome!==nome);
   await salvar();
 };
 window.loginAdmin = ()=>{
   const senha = prompt("Senha:");
   if(senha==="123"){ isAdmin=true; document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block"); }
-  else if(senha!==null) alert("Senha incorreta!");
+  else if(senha!==null) mostrarToast("Senha incorreta!");
 };
 
 // Banner
@@ -247,7 +258,7 @@ function renderAdmin(){
   });
 
   listaAprovados.innerHTML="";
-  window.listaAprovadosData.forEach(p=>{
+  listaAprovadosData.forEach(p=>{
     listaAprovados.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
       <span>${p.nome} - ${p.fone}</span>
       <button onclick="removerAprovado('${p.email}')" class="bg-red-600 px-2 py-1 text-xs">Remover</button>
@@ -255,5 +266,7 @@ function renderAdmin(){
   });
 }
 </script>
+
+<div id="toast" class="toast"></div>
 </body>
 </html>
