@@ -12,25 +12,27 @@ body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
 .equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
 #infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
 button{ cursor:pointer; }
-#adminLoginPanel { display: none; }
+#adminLoginPanel { display: none; } /* oculto por padrão */
 </style>
 </head>
 <body class="pb-10">
 
+<!-- Banner -->
 <section class="relative w-full h-[300px] md:h-[400px] bg-zinc-900 border-b-4 border-red-600">
 <img id="bannerImg" src="https://images.alphacoders.com" class="w-full h-full object-cover opacity-60">
 </section>
 
+<!-- Navegação -->
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
-<button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
+  <button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
 
-<!-- Botão Painel Admin -->
-<div class="flex items-center gap-2">
-  <button onclick="mostrarLoginAdmin()" id="btnMostrarLogin" class="bg-yellow-600 px-3 py-1 rounded text-xs font-bold">Painel Admin</button>
-</div>
+  <!-- Botão Painel Admin -->
+  <div class="flex items-center gap-2">
+    <button onclick="mostrarLoginAdmin()" id="btnMostrarLogin" class="bg-yellow-600 px-3 py-1 rounded text-xs font-bold">Painel Admin</button>
+  </div>
 </nav>
 
-<!-- Painel de login admin oculto -->
+<!-- Painel de login admin, oculto até clicar -->
 <div id="adminLoginPanel" class="max-w-6xl mx-auto mt-4 flex gap-2 items-center">
   <input type="password" id="adminSenha" placeholder="Digite a senha" class="px-2 py-1 rounded text-black text-xs">
   <button onclick="loginAdmin()" class="bg-yellow-600 px-3 py-1 rounded text-xs font-bold">Entrar</button>
@@ -39,46 +41,51 @@ button{ cursor:pointer; }
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
 
-<section id="adminPanel" class="admin-only space-y-6">
-<div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
-<h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas (Aprovar / Reprovar)</h3>
-<div id="listaEspera" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
+  <!-- Painel Admin -->
+  <section id="adminPanel" class="admin-only space-y-6">
+    <div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
+      <h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas (Aprovar / Reprovar)</h3>
+      <div id="listaEspera" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
-<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Lista de Aprovados <span id="contagemAprovados" class="text-white text-xs"></span></h3>
-<div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
+      <h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Lista de Aprovados <span id="contagemAprovados" class="text-white text-xs"></span></h3>
+      <div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
-<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Sorteador de Equipes</h3>
-<div id="infoEquipes"></div>
-<button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">Sortear Times</button>
-<div id="equipesContainer" class="mt-2"></div>
-</div>
-</section>
+      <h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Sorteador de Equipes</h3>
+      <div id="infoEquipes"></div>
+      <button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">Sortear Times</button>
+      <div id="equipesContainer" class="mt-2"></div>
+    </div>
+  </section>
 
-<div class="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
-<table class="w-full text-left">
-<thead class="bg-black text-zinc-500 text-xs uppercase">
-<tr>
-<th class="p-4">Rank</th>
-<th class="p-4">Nome no COD</th>
-<th class="p-4 text-center">Partidas</th>
-<th class="p-4 text-center text-red-500">Kills</th>
-<th class="p-4 text-right admin-only">Ações</th>
-</tr>
-</thead>
-<tbody id="rankBody"></tbody>
-</table>
-</div>
+  <!-- Ranking -->
+  <div class="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
+    <table class="w-full text-left">
+      <thead class="bg-black text-zinc-500 text-xs uppercase">
+        <tr>
+          <th class="p-4">Rank</th>
+          <th class="p-4">Nome no COD</th>
+          <th class="p-4 text-center">Partidas</th>
+          <th class="p-4 text-center text-red-500">Kills</th>
+          <th class="p-4 text-right admin-only">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="rankBody"></tbody>
+    </table>
+  </div>
 
-<div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
-<div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
-<h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
-<input id="regNome" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar Cadastro</button>
-<button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
-</div>
-</div>
+  <!-- Modal Alistamento -->
+  <div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+    <div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
+      <h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
+      <input id="regNome" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+      <input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+      <input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+      <button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar Cadastro</button>
+      <button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
+    </div>
+  </div>
+
+</main>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
@@ -155,7 +162,7 @@ window.logoutAdmin = ()=>{
   isAdmin=false;
   document.querySelectorAll(".admin-only").forEach(e=>e.style.display="none");
   document.getElementById("btnLogout").classList.add("hidden");
-  document.getElementById("adminLoginPanel").style.display="flex";
+  document.getElementById("adminLoginPanel").style.display="none"; // volta oculto
   document.getElementById("adminSenha").value="";
 };
 
