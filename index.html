@@ -96,7 +96,7 @@ const docRef = doc(db,"site","dados");
 
 let aprovados=[], espera=[], listaAprovadosData=[], bannerSalvo="https://images.alphacoders.com", isAdmin=false;
 
-// Inicializa Firebase se não existir
+// Inicializa Firestore
 async function inicializar(){ 
   const snap = await getDoc(docRef);
   if(!snap.exists()) await setDoc(docRef,{rank:[],espera:[],aprovados:[],banner:bannerSalvo});
@@ -179,30 +179,30 @@ window.removerAprovado = async (email)=>{
 window.addScore = async (nome)=>{ const k=parseInt(prompt("Kills","0"))||0; const idx=aprovados.findIndex(p=>p.nome===nome); if(idx>-1){ aprovados[idx].matches+=1; aprovados[idx].kills+=k; await salvar(); renderRank(); } };
 window.removerDoRank = async (nome)=>{ aprovados=aprovados.filter(p=>p.nome!==nome); listaAprovadosData=listaAprovadosData.filter(p=>p.nome!==nome); await salvar(); renderRank(); renderAdmin(); };
 
-// Sorteador de Equipes Correto
+// Sorteador de Equipes - divisão proporcional
 window.sortearEquipes = ()=>{
   const totalJogadores = aprovados.length;
-  if (totalJogadores < 2) { mostrarToast("Precisa de pelo menos 2 jogadores"); return; }
+  if(totalJogadores < 2){ mostrarToast("Precisa de pelo menos 2 jogadores"); return; }
 
-  const maxPorEquipe = 4;
-  const numEquipes = Math.ceil(totalJogadores / maxPorEquipe);
+  let numEquipes = parseInt(prompt(`Quantas equipes criar? (1-${totalJogadores})`));
+  if(isNaN(numEquipes) || numEquipes<1) numEquipes=1;
+  if(numEquipes>totalJogadores) numEquipes = totalJogadores;
 
-  const lista = [...aprovados].sort(() => Math.random() - 0.5);
-  let equipes = Array.from({ length: numEquipes }, () => []);
+  const lista = [...aprovados].sort(() => Math.random()-0.5);
+  const equipes = Array.from({length:numEquipes}, ()=>[]);
 
-  lista.forEach((player, index) => {
+  lista.forEach((player,index)=>{
     const equipeIndex = index % numEquipes;
     equipes[equipeIndex].push(player.nome);
   });
 
   const cores = ["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400","bg-purple-500","bg-orange-400"];
   const container = document.getElementById("equipesContainer");
-  container.innerHTML = "";
-
-  equipes.forEach((eq, i) => {
+  container.innerHTML="";
+  equipes.forEach((eq,i)=>{
     const div = document.createElement("div");
     div.className = `equipe ${cores[i % cores.length]} p-2 mb-2`;
-    div.textContent = `Equipe ${i + 1}:\n${eq.join(", ")}`;
+    div.textContent = `Equipe ${i+1}: ${eq.join(", ")}`;
     container.appendChild(div);
   });
 };
