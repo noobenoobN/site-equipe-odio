@@ -12,6 +12,7 @@ body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f1f1f; color: #fff; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: opacity 0.4s; z-index:1000;}
 .toast.show { opacity: 1; }
 input[type="file"]{ font-size:10px; }
+button{ cursor:pointer; }
 </style>
 </head>
 <body class="pb-10">
@@ -24,7 +25,7 @@ input[type="file"]{ font-size:10px; }
 <!-- NAV -->
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
 <button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
-<button onclick="loginAdmin()">Admin</button>
+<button onclick="loginAdmin()">Painel Admin</button>
 </nav>
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
@@ -32,7 +33,7 @@ input[type="file"]{ font-size:10px; }
 <!-- ADMIN PANEL -->
 <section id="adminPanel" class="admin-only space-y-6">
 <div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
-<h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas</h3>
+<h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas (Aprovar/ Reprovar)</h3>
 <div id="listaEspera" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
 <h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Lista de Aprovados</h3>
@@ -138,7 +139,6 @@ window.solicitarEntrada = async ()=>{
   const duplicado = [...espera,...listaAprovadosData].some(p=>p.nome===nome || p.email===email || p.fone===fone);
   if(duplicado){ mostrarToast("❌ Já cadastrado!"); return; }
 
-  // Criar senha alfanumérica mínima 6
   const senha = prompt("Primeiro acesso! Crie uma senha alfanumérica (min 6 dígitos):");
   if(!senha || senha.length<6 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)){
     mostrarToast("❌ Senha inválida"); return;
