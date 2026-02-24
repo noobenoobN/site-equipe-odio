@@ -12,9 +12,6 @@ body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
 .equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
 button{ cursor:pointer; }
 #infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
-.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; padding: 1rem; }
-.modal-content { background: #1f1f1f; padding: 2rem; border: 2px solid #f00; border-radius: 0.5rem; max-width: 400px; width: 100%; }
-.hidden { display: none; }
 </style>
 </head>
 <body class="pb-10">
@@ -24,9 +21,8 @@ button{ cursor:pointer; }
 </section>
 
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
-<button onclick="abrirModal('alistar')" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
-<button onclick="abrirModal('login')" class="bg-yellow-600 px-6 py-2 rounded text-xs font-bold uppercase">Entrar</button>
-<button onclick="toggleAdminLogin()" class="bg-blue-600 px-6 py-2 rounded text-xs font-bold uppercase">Painel Admin</button>
+<button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
+<button onclick="loginAdmin()">Painel Admin</button>
 </nav>
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
@@ -40,7 +36,7 @@ button{ cursor:pointer; }
 <div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
 <h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Sorteador de Equipes</h3>
-<div id="infoEquipes"></div>
+<div id="infoEquipes"></div> <!-- Aqui aparecerá a quantidade de equipes e jogadores -->
 <button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">Sortear Times</button>
 <div id="equipesContainer" class="mt-2"></div>
 </div>
@@ -61,39 +57,13 @@ button{ cursor:pointer; }
 </table>
 </div>
 
-<!-- MODAL UNIFICADO -->
-<div id="modalUnico" class="modal flex">
-<div class="modal-content">
-<h2 id="modalTitle" class="text-2xl font-bold mb-6 text-center uppercase"></h2>
-
-<!-- Alistamento -->
-<div id="modalAlistar">
+<div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+<div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
+<h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
 <input id="regNome" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
 <input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
 <input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
 <button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar Cadastro</button>
-</div>
-
-<!-- Login de Aprovado -->
-<div id="modalLogin" class="hidden">
-<input id="loginNome" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<input id="loginSenha" placeholder="Senha" type="password" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<button onclick="loginUsuario()" class="w-full bg-yellow-600 py-3 font-bold uppercase">Entrar</button>
-</div>
-
-<!-- Primeiro acesso / clan -->
-<div id="modalPrimeiroAcesso" class="hidden">
-<p class="mb-2">Crie sua senha (mínimo 6 dígitos, letras e números)</p>
-<input id="primeiraSenha" type="password" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<p class="mb-2">Você é de algum clan?</p>
-<select id="temClan" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-  <option value="nao">Não</option>
-  <option value="sim">Sim</option>
-</select>
-<input id="nomeClan" placeholder="Nome do clan" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2 hidden">
-<button onclick="finalizarPrimeiroAcesso()" class="w-full bg-green-600 py-3 font-bold uppercase">Finalizar</button>
-</div>
-
 <button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
 </div>
 </div>
@@ -116,16 +86,13 @@ const db = getFirestore(app);
 const docRef = doc(db,"site","dados");
 
 let aprovados=[], espera=[], listaAprovadosData=[], bannerSalvo="https://images.alphacoders.com", isAdmin=false;
-let usuarioAtual=null;
 
-// Inicializar
 async function inicializar(){ 
   const snap = await getDoc(docRef);
   if(!snap.exists()) await setDoc(docRef,{rank:[],espera:[],aprovados:[],banner:bannerSalvo});
 }
 await inicializar();
 
-// Atualizações em tempo real
 onSnapshot(docRef, snap=>{
   if(snap.exists()){
     const d = snap.data();
@@ -140,89 +107,44 @@ onSnapshot(docRef, snap=>{
 
 async function salvar(){ await setDoc(docRef,{rank:aprovados,espera:espera,aprovados:listaAprovadosData,banner:bannerSalvo}); }
 
-// Modal
-function abrirModal(tipo){
-  modalUnico.classList.add("flex");
-  modalUnico.classList.remove("hidden");
-  modalAlistar.classList.add("hidden");
-  modalLogin.classList.add("hidden");
-  modalPrimeiroAcesso.classList.add("hidden");
+window.abrirModal = ()=> modalCadastro.classList.remove("hidden");
+window.fecharModal = ()=> modalCadastro.classList.add("hidden");
 
-  if(tipo==="alistar") { modalTitle.textContent="Alistar-se"; modalAlistar.classList.remove("hidden"); }
-  if(tipo==="login") { modalTitle.textContent="Entrar"; modalLogin.classList.remove("hidden"); }
-}
-
-function fecharModal(){ modalUnico.classList.remove("flex"); modalUnico.classList.add("hidden"); }
-
-// Cadastro
-async function solicitarEntrada(){
-  const nome=regNome.value.trim(), email=regEmail.value.trim(), fone=regFone.value.trim();
+window.solicitarEntrada = async ()=>{
+  const nome=regNome.value.trim();
+  const email=regEmail.value.trim();
+  const fone=regFone.value.trim();
   if(!nome||!email||!fone){ alert("Preencha todos os campos!"); return; }
+
   const duplicado=[...espera,...listaAprovadosData].some(p=>p.nome===nome || p.email===email || p.fone===fone);
   if(duplicado){ alert("Já cadastrado!"); return; }
 
-  espera.push({nome,email,fone,id:Date.now()});
+  const senha=prompt("Primeiro acesso! Crie uma senha alfanumérica (mínimo 6 dígitos):");
+  if(!senha||senha.length<6||!/\d/.test(senha)||!/[a-zA-Z]/.test(senha)){ alert("Senha inválida"); return; }
+
+  espera.push({nome,email,fone,senha,id:Date.now()});
   await salvar();
   alert("Pedido enviado com sucesso!");
   regNome.value=""; regEmail.value=""; regFone.value="";
   fecharModal();
-}
+};
 
-// Login aprovado
-function loginUsuario(){
-  const nome=loginNome.value.trim(), senha=loginSenha.value.trim();
-  const usuario = listaAprovadosData.find(p=>p.nome===nome && p.senha===senha);
-  if(usuario){ 
-    usuarioAtual=usuario; 
-    alert("Login efetuado!"); 
-    fecharModal(); 
-  } else {
-    alert("Nome ou senha incorretos!");
-  }
-}
+window.loginAdmin = ()=>{
+  const senha = prompt("Senha Admin:");
+  if(senha==="123"){ isAdmin=true; document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block"); }
+  else if(senha!==null) alert("Senha incorreta!");
+};
 
-// Primeiro acesso (aprovado cria senha + clan)
-function abrirPrimeiroAcesso(usuario){
-  usuarioAtual=usuario;
-  modalTitle.textContent="Primeiro Acesso";
-  modalAlistar.classList.add("hidden");
-  modalLogin.classList.add("hidden");
-  modalPrimeiroAcesso.classList.remove("hidden");
-  modalUnico.classList.remove("hidden");
-}
-
-temClan.addEventListener("change",()=>{ nomeClan.style.display=(temClan.value==="sim")?"block":"none"; });
-
-async function finalizarPrimeiroAcesso(){
-  const senha=primeiraSenha.value.trim(), clan=(temClan.value==="sim")?nomeClan.value.trim():"";
-  if(!senha || senha.length<6 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)){ alert("Senha inválida"); return; }
-  usuarioAtual.senha=senha;
-  usuarioAtual.clan=clan;
-  const idx=listaAprovadosData.findIndex(p=>p.nome===usuarioAtual.nome);
-  if(idx>-1) listaAprovadosData[idx]=usuarioAtual;
-  await salvar();
-  alert("Senha criada com sucesso!");
-  fecharModal();
-  renderRank();
-}
-
-// Admin
-function toggleAdminLogin(){ 
-  const senhaAdm=prompt("Digite a senha do Admin:");
-  if(senhaAdm==="123"){ isAdmin=true; document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block"); }
-  else if(senhaAdm!==null) alert("Senha incorreta!");
-}
-
-// Aprovar / Reprovar / Remover
 window.aprovar = async (id)=>{
   const idx=espera.findIndex(p=>p.id===id);
   if(idx===-1) return;
   const j=espera.splice(idx,1)[0];
   const novo={nome:j.nome,matches:0,kills:0};
   aprovados.push(novo);
-  listaAprovadosData.push({nome:j.nome,fone:j.fone,email:j.email});
+  listaAprovadosData.push({nome:j.nome,fone:j.fone,email:j.email,senha:j.senha});
   await salvar(); renderRank(); renderAdmin();
 };
+
 window.reprovar = async (id)=>{ espera=espera.filter(p=>p.id!==id); await salvar(); renderAdmin(); };
 window.removerAprovado = async (email)=>{ 
   listaAprovadosData=listaAprovadosData.filter(p=>p.email!==email); 
@@ -230,15 +152,44 @@ window.removerAprovado = async (email)=>{
   await salvar(); renderRank(); renderAdmin(); 
 };
 
-// Rank
+window.addScore = async (nome)=>{ const k=parseInt(prompt("Kills","0"))||0; const idx=aprovados.findIndex(p=>p.nome===nome); if(idx>-1){ aprovados[idx].matches+=1; aprovados[idx].kills+=k; await salvar(); renderRank(); } };
+window.removerDoRank = async (nome)=>{ aprovados=aprovados.filter(p=>p.nome!==nome); listaAprovadosData=listaAprovadosData.filter(p=>p.nome!==nome); await salvar(); renderRank(); renderAdmin(); };
+
+window.sortearEquipes = ()=>{
+  const totalJogadores = aprovados.length;
+  if(totalJogadores < 2){ alert("Precisa de pelo menos 2 jogadores"); return; }
+
+  let numEquipes = totalJogadores < 8 ? 2 : parseInt(prompt(`Quantas equipes criar?`));
+  if(isNaN(numEquipes) || numEquipes<1) numEquipes=1;
+  if(numEquipes>totalJogadores) numEquipes = totalJogadores;
+
+  const lista = [...aprovados].sort(() => Math.random()-0.5);
+  const equipes = Array.from({length:numEquipes}, ()=>[]);
+  lista.forEach((player,index)=>equipes[index % numEquipes].push(player.nome));
+
+  // MOSTRA INFO DIRETO NA PÁGINA
+  const infoDiv = document.getElementById("infoEquipes");
+  infoDiv.textContent = `Total de jogadores: ${totalJogadores} | Número de equipes: ${numEquipes}`;
+
+  const cores = ["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400","bg-purple-500","bg-orange-400"];
+  const container = document.getElementById("equipesContainer");
+  container.innerHTML="";
+  equipes.forEach((eq,i)=>{
+    const div = document.createElement("div");
+    div.className = `equipe ${cores[i % cores.length]} p-2 mb-2`;
+    div.textContent = `Equipe ${i+1}: ${eq.join(", ")}`;
+    container.appendChild(div);
+  });
+};
+
 function renderRank(){
   rankBody.innerHTML="";
   aprovados.forEach((p,i)=>{
     rankBody.innerHTML+=`<tr class="border-b border-zinc-800">
       <td class="p-4">#${i+1}</td>
       <td class="p-4">${p.nome}</td>
-      <td class="p-4 text-center">${p.matches||0}</td>
-      <td class="p-4 text-center text-red-500">${p.kills||0}</td>
+      <td class="p-4 text-center">${p.matches}</td>
+      <td class="p-4 text-center text-red-500">${p.kills}</td>
       <td class="p-4 text-right admin-only" style="display:${isAdmin?'block':'none'}">
         <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">+K</button>
         <button onclick="removerDoRank('${p.nome}')" class="text-red-500 ml-2">X</button>
@@ -247,7 +198,6 @@ function renderRank(){
   });
 }
 
-// Admin
 function renderAdmin(){
   contagemAprovados.textContent=`(${listaAprovadosData.length} jogador(es))`;
 
@@ -270,44 +220,6 @@ function renderAdmin(){
     </div>`;
   });
 }
-
-// Sorteio de equipes
-window.sortearEquipes = ()=>{
-  const totalJogadores = aprovados.length;
-  if(totalJogadores<2){ alert("Precisa de pelo menos 2 jogadores"); return; }
-  let numEquipes = totalJogadores<8?2:parseInt(prompt(`Quantas equipes criar?`));
-  if(isNaN(numEquipes)||numEquipes<1) numEquipes=1;
-  if(numEquipes>totalJogadores) numEquipes=totalJogadores;
-
-  const lista = [...aprovados].sort(() => Math.random()-0.5);
-  const equipes = Array.from({length:numEquipes}, ()=>[]);
-  lista.forEach((player,index)=>equipes[index%numEquipes].push(player.nome));
-
-  const infoDiv = document.getElementById("infoEquipes");
-  infoDiv.textContent = `Total de jogadores: ${totalJogadores} | Número de equipes: ${numEquipes}`;
-
-  const cores = ["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400","bg-purple-500","bg-orange-400"];
-  const container = document.getElementById("equipesContainer");
-  container.innerHTML="";
-  equipes.forEach((eq,i)=>{
-    const div=document.createElement("div");
-    div.className=`equipe ${cores[i%cores.length]} p-2 mb-2`;
-    div.textContent=`Equipe ${i+1}: ${eq.join(", ")}`;
-    container.appendChild(div);
-  });
-};
-
-// Funções auxiliares admin rank
-window.addScore = async(nome)=>{
-  const k=parseInt(prompt("Kills","0"))||0;
-  const idx=aprovados.findIndex(p=>p.nome===nome);
-  if(idx>-1){ aprovados[idx].matches+=1; aprovados[idx].kills+=k; await salvar(); renderRank(); }
-};
-window.removerDoRank = async(nome)=>{
-  aprovados=aprovados.filter(p=>p.nome!==nome);
-  listaAprovadosData=listaAprovadosData.filter(p=>p.nome!==nome);
-  await salvar(); renderRank(); renderAdmin();
-};
 </script>
 </body>
 </html>
