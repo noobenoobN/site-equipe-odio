@@ -20,22 +20,30 @@ button{ cursor:pointer; }
 <img id="bannerImg" src="https://images.alphacoders.com" class="w-full h-full object-cover opacity-60">
 </section>
 
+<!-- NAV -->
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
+
 <div class="flex gap-4">
 <button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
 Alistar-se
 </button>
+
 <button onclick="abrirLogin()" class="bg-blue-600 px-6 py-2 rounded text-xs font-bold uppercase">
 Login
 </button>
 </div>
 
+<!-- 🔴 BOTÃO SAIR ADICIONADO 🔴 -->
 <div class="flex gap-3 items-center">
 <button onclick="loginAdmin()">Painel Admin</button>
-<button id="btnLogoutAdmin" onclick="logoutAdmin()" class="hidden text-red-500 text-xs uppercase">
+
+<button id="btnLogoutAdmin"
+onclick="logoutAdmin()"
+class="hidden text-red-600 font-bold text-xs uppercase">
 Sair
 </button>
 </div>
+
 </nav>
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
@@ -74,29 +82,6 @@ Sortear Times
 </thead>
 <tbody id="rankBody"></tbody>
 </table>
-</div>
-
-<!-- MODAL CADASTRO -->
-<div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
-<div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
-<h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
-<input id="regNome" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar Cadastro</button>
-<button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
-</div>
-</div>
-
-<!-- MODAL LOGIN -->
-<div id="modalLogin" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
-<div class="bg-zinc-900 p-8 rounded border border-blue-600 max-w-md w-full">
-<h2 class="text-2xl font-bold mb-6 text-center uppercase">Login</h2>
-<input id="loginEmail" placeholder="Email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<input id="loginSenha" type="password" placeholder="Senha" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
-<button onclick="fazerLogin()" class="w-full bg-blue-600 py-3 font-bold uppercase">Entrar</button>
-<button onclick="fecharLogin()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
-</div>
 </div>
 
 <script type="module">
@@ -146,28 +131,35 @@ async function salvar(){
   });
 }
 
-window.logoutAdmin = ()=>{
-  isAdmin=false;
-  document.querySelectorAll(".admin-only").forEach(e=>e.style.display="none");
-  document.getElementById("btnLogoutAdmin").classList.add("hidden");
-  renderRank();
-  renderAdmin();
-};
-
 window.loginAdmin = ()=>{
   const senha = prompt("Senha Admin:");
   if(senha==="123"){
     isAdmin=true;
-    document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block");
-    document.getElementById("btnLogoutAdmin").classList.remove("hidden");
-    renderRank();
-    renderAdmin();
+    document.querySelectorAll(".admin-only")
+    .forEach(e=>e.style.display="block");
+
+    document.getElementById("btnLogoutAdmin")
+    .classList.remove("hidden");
+
   } else if(senha!==null){
     alert("Senha incorreta!");
   }
 };
 
-/* RESTANTE DO SEU SISTEMA CONTINUA IGUAL */
+/* 🔴🔴🔴 FUNÇÃO SAIR ADMIN 🔴🔴🔴 */
+window.logoutAdmin = ()=>{
+  isAdmin=false;
+
+  document.querySelectorAll(".admin-only")
+  .forEach(e=>e.style.display="none");
+
+  document.getElementById("btnLogoutAdmin")
+  .classList.add("hidden");
+
+  renderRank();
+  renderAdmin();
+};
+/* 🔴🔴🔴 FIM SAIR ADMIN 🔴🔴🔴 */
 
 </script>
 </body>
