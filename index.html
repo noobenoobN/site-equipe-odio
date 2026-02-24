@@ -9,14 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet" />
 
 <style>
-  body {
-    font-family: 'Oswald', sans-serif;
-    background: #050505;
-    color: #eee;
-  }
-  .admin-only {
-    display: none;
-  }
+  body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
+  .admin-only { display: none; }
 </style>
 </head>
 <body class="pb-10">
@@ -42,6 +36,8 @@
     <div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
       <h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas</h3>
       <div id="listaEspera" class="space-y-2"></div>
+      <h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Lista de Aprovados</h3>
+      <div id="listaAprovados" class="space-y-2"></div>
     </div>
   </section>
 
@@ -77,7 +73,6 @@
   </div>
 </div>
 
-<!-- FIREBASE SCRIPT -->
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
@@ -100,22 +95,26 @@ let aprovados = [];
 let espera = [];
 let isAdmin = false;
 
+// Inicializa documento se não existir
 async function inicializar() {
   const snap = await getDoc(docRef);
   if (!snap.exists()) {
     await setDoc(docRef, {
       rank: [],
-      espera: []
+      espera: [],
+      aprovados: [] // lista completa para admin com nome e telefone
     });
   }
 }
 await inicializar();
 
+// Atualização em tempo real
 onSnapshot(docRef, (snap) => {
   if (snap.exists()) {
     const d = snap.data();
     aprovados = d.rank || [];
     espera = d.espera || [];
+    window.listaAprovadosData = d.aprovados || [];
     renderRank();
     renderAdmin();
   }
@@ -124,13 +123,16 @@ onSnapshot(docRef, (snap) => {
 async function salvar() {
   await setDoc(docRef, {
     rank: aprovados,
-    espera: espera
+    espera: espera,
+    aprovados: window.listaAprovadosData
   });
 }
 
+// Modal
 window.abrirModal = () => modalCadastro.classList.remove("hidden");
 window.fecharModal = () => modalCadastro.classList.add("hidden");
 
+// Cadastro com verificação de duplicados
 window.solicitarEntrada = async () => {
   const nome = regNome.value.trim();
   const email = regEmail.value.trim();
@@ -138,6 +140,15 @@ window.solicitarEntrada = async () => {
 
   if (!nome || !email || !fone) {
     alert("⚠️ Preencha todos os campos!");
+    return;
+  }
+
+  // Verificar duplicados
+  const duplicado = window.listaAprovadosData.some(p => p.nome === nome || p.fone === fone) ||
+                     espera.some(p => p.nome === nome || p.fone === fone);
+
+  if (duplicado) {
+    alert("❌ Este nome ou telefone já foi cadastrado!");
     return;
   }
 
@@ -153,11 +164,15 @@ window.solicitarEntrada = async () => {
   fecharModal();
 };
 
+// Admin
 window.aprovar = async (id) => {
   const idx = espera.findIndex(p => p.id === id);
   if (idx === -1) return;
   const j = espera.splice(idx, 1)[0];
+
   aprovados.push({ name: j.nome, matches: 0, kills: 0 });
+  window.listaAprovadosData.push({ nome: j.nome, fone: j.fone });
+
   await salvar();
 };
 
@@ -177,6 +192,7 @@ window.addScore = async (nome) => {
 
 window.removerDoRank = async (nome) => {
   aprovados = aprovados.filter(p => p.name !== nome);
+  window.listaAprovadosData = window.listaAprovadosData.filter(p => p.nome !== nome);
   await salvar();
 };
 
@@ -190,6 +206,7 @@ window.loginAdmin = () => {
   }
 };
 
+// Render
 function renderRank() {
   rankBody.innerHTML = "";
   aprovados.sort((a, b) => b.kills - a.kills);
@@ -209,16 +226,23 @@ function renderRank() {
 }
 
 function renderAdmin() {
+  // Lista de espera
   listaEspera.innerHTML = "";
   espera.forEach(p => {
     listaEspera.innerHTML += `
       <div class="bg-black p-2 rounded flex justify-between">
-        <div>${p.nome}</div>
+        <div>${p.nome} - ${p.fone}</div>
         <div>
           <button onclick="aprovar(${p.id})" class="bg-green-600 px-2 py-1 text-xs">V</button>
           <button onclick="reprovar(${p.id})" class="bg-red-600 px-2 py-1 text-xs">X</button>
         </div>
       </div>`;
+  });
+
+  // Lista completa de aprovados com nome + telefone
+  listaAprovados.innerHTML = "";
+  window.listaAprovadosData.forEach(p => {
+    listaAprovados.innerHTML += `<div class="bg-black p-2 rounded">${p.nome} - ${p.fone}</div>`;
   });
 }
 
