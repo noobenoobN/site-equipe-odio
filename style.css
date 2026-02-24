@@ -1,0 +1,43 @@
+/* Estilos Customizados Equipe [ODIO] */
+body {
+    font-family: 'Oswald', sans-serif;
+    background-color: #050505;
+    color: #eee;
+}
+
+.admin-only {
+    display: none;
+}
+
+/* Efeito de glitch suave no texto vermelho */
+.text-red-600 {
+    text-shadow: 2px 2px 0px rgba(255, 0, 0, 0.2);
+}
+
+/* Scrollbar personalizada para o painel */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #ff0000;
+}
+
+/* Animação para entrada de itens */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+tr {
+    animation: fadeIn 0.3s ease-out forwards;
+}
