@@ -11,7 +11,6 @@ body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
 .admin-only { display: none; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f1f1f; color: #fff; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: opacity 0.4s; z-index:1000;}
 .toast.show { opacity: 1; }
-input[type="file"]{ font-size:10px; }
 button{ cursor:pointer; }
 </style>
 </head>
@@ -39,8 +38,8 @@ button{ cursor:pointer; }
 <h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Lista de Aprovados</h3>
 <div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
-<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Sorteador de Equipes</h3>
-<button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">Sortear Times (até 4 por equipe)</button>
+<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Sorteador de Equipes (máx. 4 pessoas)</h3>
+<button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">Sortear Times</button>
 </div>
 </section>
 
@@ -198,17 +197,26 @@ window.removerDoRank = async (nome)=>{
   await salvar(); renderRank(); renderAdmin();
 };
 
-// SORTEADOR DE EQUIPES
+// SORTEADOR LIMITADO 4 PESSOAS
 window.sortearEquipes = ()=>{
   if(aprovados.length<2){ mostrarToast("Precisa de pelo menos 2 jogadores"); return; }
   const lista = [...aprovados].sort(()=>Math.random()-0.5);
-  const equipes = [];
-  const tamanhoEquipe = 4;
-  for(let i=0;i<lista.length;i+=tamanhoEquipe){
-    equipes.push(lista.slice(i,i+tamanhoEquipe));
-  }
+  const cores = ["🔴","🔵","🟢","🟡","🟣","🟠"];
+  let equipes = [];
+  let equipe = [];
+  let corIndex = 0;
+
+  lista.forEach((p,i)=>{
+    equipe.push(p.nome);
+    if(equipe.length===4 || i===lista.length-1){
+      equipes.push({cor:cores[corIndex%cores.length], membros:[...equipe]});
+      corIndex++;
+      equipe = [];
+    }
+  });
+
   let msg = "";
-  equipes.forEach((eq,i)=>{ msg+=`Equipe ${i+1}:\n`+eq.map(p=>"- "+p.nome).join("\n")+"\n\n"; });
+  equipes.forEach((eq,i)=>{ msg+=`${eq.cor} Equipe ${i+1}:\n`+eq.membros.map(p=>"- "+p).join("\n")+"\n\n"; });
   alert(msg);
 };
 
