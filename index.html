@@ -12,24 +12,29 @@ body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
 .equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
 button{ cursor:pointer; }
 #infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
+#adminLoginContainer { display: none; margin-top: 6px; }
 </style>
 </head>
 <body class="pb-10">
 
-<!-- BANNER -->
 <section class="relative w-full h-[300px] md:h-[400px] bg-zinc-900 border-b-4 border-red-600">
 <img id="bannerImg" src="https://images.alphacoders.com" class="w-full h-full object-cover opacity-60">
 </section>
 
-<!-- NAVEGAÇÃO -->
-<nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
+<nav class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center p-6 bg-zinc-900 border-b border-zinc-800 space-y-2 md:space-y-0">
 <button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
-<button onclick="loginAdmin()">Painel Admin</button>
+
+<div class="flex flex-col md:flex-row items-start md:items-center">
+  <button id="btnPainelAdmin" onclick="mostrarLoginAdmin()" class="bg-yellow-600 px-4 py-2 rounded text-xs font-bold uppercase">Painel Admin</button>
+  <div id="adminLoginContainer" class="flex space-x-2">
+    <input type="password" id="senhaAdminInput" placeholder="Digite a senha" class="px-3 py-2 rounded bg-black border border-zinc-700 text-white text-xs">
+    <button onclick="verificarSenha()" class="bg-yellow-500 px-3 py-2 rounded text-xs font-bold">Entrar</button>
+  </div>
+</div>
 </nav>
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
 
-<!-- PAINEL ADMIN -->
 <section id="adminPanel" class="admin-only space-y-6">
 <div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
 <h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas (Aprovar / Reprovar)</h3>
@@ -73,7 +78,6 @@ button{ cursor:pointer; }
 </div>
 </div>
 
-<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
@@ -114,12 +118,9 @@ onSnapshot(docRef, snap=>{
   }
 });
 
-// Salvar no Firebase
-async function salvar(){
-  await setDoc(docRef,{rank:aprovados,espera:espera,aprovados:listaAprovadosData,banner:bannerSalvo});
-}
+async function salvar(){ await setDoc(docRef,{rank:aprovados,espera:espera,aprovados:listaAprovadosData,banner:bannerSalvo}); }
 
-// Funções de UI
+// Modal alistamento
 window.abrirModal = ()=> modalCadastro.classList.remove("hidden");
 window.fecharModal = ()=> modalCadastro.classList.add("hidden");
 
@@ -130,11 +131,9 @@ window.solicitarEntrada = async ()=>{
   const fone = regFone.value.trim();
   if(!nome||!email||!fone){ alert("Preencha todos os campos!"); return; }
 
-  // Verifica duplicados
   const duplicado = [...espera,...listaAprovadosData].some(p=>p.nome===nome || p.email===email || p.fone===fone);
   if(duplicado){ alert("Já cadastrado!"); return; }
 
-  // Criação de senha
   const senha = prompt("Primeiro acesso! Crie uma senha alfanumérica (mínimo 6 dígitos):");
   if(!senha || senha.length<6 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)){ alert("Senha inválida"); return; }
 
@@ -145,13 +144,20 @@ window.solicitarEntrada = async ()=>{
   fecharModal();
 };
 
-// Login Admin
-window.loginAdmin = ()=>{
-  const senha = prompt("Senha Admin:");
-  if(senha==="123"){ 
-    isAdmin=true; 
-    document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block"); 
-  } else if(senha!==null) alert("Senha incorreta!");
+// Mostrar campo senha Admin
+window.mostrarLoginAdmin = ()=>{
+  document.getElementById("adminLoginContainer").style.display = "flex";
+};
+
+// Verificar senha Admin
+window.verificarSenha = ()=>{
+  const senha = document.getElementById("senhaAdminInput").value;
+  if(senha==="123"){
+    isAdmin=true;
+    document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block");
+    document.getElementById("adminLoginContainer").style.display="none";
+    document.getElementById("senhaAdminInput").value="";
+  } else { alert("Senha incorreta!"); }
 };
 
 // Aprovar/Reprovar
