@@ -9,9 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
-body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
-.admin-only { display: none; }
-button { cursor: pointer; }
+body { font-family: 'Oswald', sans-serif; background:#050505; color:#eee; }
+.admin-only { display:none; }
+button { cursor:pointer; }
 </style>
 </head>
 <body>
@@ -23,19 +23,18 @@ button { cursor: pointer; }
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
 
   <div class="flex gap-4">
-    <button onclick="abrirModal()" 
+    <button onclick="abrirModal()"
       class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
       Alistar-se
     </button>
 
-    <button onclick="abrirLogin()" 
+    <button onclick="abrirLogin()"
       class="bg-blue-600 px-6 py-2 rounded text-xs font-bold uppercase">
       Login
     </button>
   </div>
 
-  <button onclick="loginAdmin()" 
-    class="text-white text-xs uppercase">
+  <button onclick="loginAdmin()" class="text-white text-xs uppercase">
     Painel Admin
   </button>
 
@@ -43,21 +42,16 @@ button { cursor: pointer; }
 
 <main class="max-w-6xl mx-auto p-6">
 
-<!-- PAINEL ADMIN -->
 <section id="adminPanel" class="admin-only bg-zinc-900 p-6 rounded border-2 border-yellow-600 mb-6">
-
 <h3 class="text-yellow-500 font-bold mb-3 uppercase">
-Recrutas (Aprovar / Reprovar)
+Recrutas
 </h3>
-
 <div id="listaEspera" class="space-y-2"></div>
 
 <h3 class="text-yellow-500 font-bold mt-6 mb-3 uppercase">
-Aprovados <span id="contagemAprovados"></span>
+Aprovados (<span id="contagemAprovados"></span>)
 </h3>
-
 <div id="listaAprovados" class="space-y-2"></div>
-
 </section>
 
 </main>
@@ -116,10 +110,12 @@ Fechar
 </div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot }
 from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
+/* 🔥 COLOQUE AQUI SUA CONFIG REAL DO FIREBASE */
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
   authDomain: "SEU_AUTH_DOMAIN",
@@ -137,6 +133,7 @@ let espera = [];
 let aprovados = [];
 let isAdmin = false;
 
+/* INICIALIZA */
 async function init(){
   const snap = await getDoc(docRef);
   if(!snap.exists()){
@@ -145,6 +142,7 @@ async function init(){
 }
 await init();
 
+/* REALTIME */
 onSnapshot(docRef,(snap)=>{
   if(snap.exists()){
     const d = snap.data();
@@ -158,29 +156,32 @@ async function salvar(){
   await setDoc(docRef,{espera,aprovados});
 }
 
+/* MODAIS */
 window.abrirModal=()=>modalCadastro.classList.remove("hidden");
 window.fecharModal=()=>modalCadastro.classList.add("hidden");
 window.abrirLogin=()=>modalLogin.classList.remove("hidden");
 window.fecharLogin=()=>modalLogin.classList.add("hidden");
 
+/* CADASTRO */
 window.solicitarEntrada=async()=>{
   const nome=regNome.value.trim();
   const email=regEmail.value.trim();
   const fone=regFone.value.trim();
 
-  if(!nome||!email||!fone){ alert("Preencha todos os campos"); return;}
+  if(!nome||!email||!fone){
+    alert("Preencha todos os campos");
+    return;
+  }
 
   const eClan=confirm("Você é de algum clan?");
   let clan="";
-
   if(eClan){
     clan=prompt("Qual nome do clan?");
-    if(!clan){ alert("Informe o nome do clan"); return;}
+    if(!clan){ alert("Informe o nome do clan"); return; }
   }
 
   espera.push({
-    nome,email,fone,
-    clan,
+    nome,email,fone,clan,
     senha:"",
     primeiroAcesso:true,
     id:Date.now()
@@ -191,17 +192,22 @@ window.solicitarEntrada=async()=>{
   fecharModal();
 };
 
+/* LOGIN */
 window.fazerLogin=async()=>{
   const email=loginEmail.value.trim();
   const senha=loginSenha.value.trim();
 
   const user=aprovados.find(u=>u.email===email);
-  if(!user){ alert("Usuário não aprovado!"); return;}
+  if(!user){
+    alert("Usuário não aprovado!");
+    return;
+  }
 
   if(user.primeiroAcesso){
-    const nova=prompt("Primeiro acesso! Crie senha alfanumérica (mín 6 caracteres)");
+    const nova=prompt("Primeiro acesso! Crie senha alfanumérica (mín 6)");
     if(!nova||nova.length<6||!/\d/.test(nova)||!/[a-zA-Z]/.test(nova)){
-      alert("Senha inválida"); return;
+      alert("Senha inválida");
+      return;
     }
     user.senha=nova;
     user.primeiroAcesso=false;
@@ -219,6 +225,7 @@ window.fazerLogin=async()=>{
   fecharLogin();
 };
 
+/* ADMIN */
 window.loginAdmin=()=>{
   const s=prompt("Senha Admin:");
   if(s==="123"){
@@ -241,8 +248,9 @@ window.reprovar=async(id)=>{
   await salvar();
 };
 
+/* RENDER */
 function renderAdmin(){
-  contagemAprovados.textContent=`(${aprovados.length})`;
+  contagemAprovados.textContent=aprovados.length;
 
   listaEspera.innerHTML="";
   espera.forEach(p=>{
@@ -266,7 +274,7 @@ function renderAdmin(){
     </div>`;
   });
 }
-</script>
 
+</script>
 </body>
 </html>
