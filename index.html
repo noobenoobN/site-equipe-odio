@@ -58,7 +58,7 @@
       <thead class="bg-black text-zinc-500 text-xs uppercase">
         <tr>
           <th class="p-4">Rank</th>
-          <th class="p-4">Soldado</th>
+          <th class="p-4">Nome</th>
           <th class="p-4 text-center">Partidas</th>
           <th class="p-4 text-center text-red-500">Kills</th>
           <th class="p-4 text-right admin-only">Ações</th>
@@ -126,14 +126,12 @@ window.listaAprovadosData = [];
 let bannerSalvo = "https://images.alphacoders.com";
 let isAdmin = false;
 
-// Inicializa dados no Firebase caso não existam
 async function inicializar() {
   const snap = await getDoc(docRef);
   if (!snap.exists()) await setDoc(docRef, { rank: [], espera: [], aprovados: [], banner: bannerSalvo });
 }
 await inicializar();
 
-// Atualização em tempo real
 onSnapshot(docRef, snap=>{
   if(snap.exists()){
     const d = snap.data();
@@ -146,10 +144,9 @@ onSnapshot(docRef, snap=>{
   }
 });
 
-// Salvar dados
 async function salvar() { await setDoc(docRef, { rank: aprovados, espera: espera, aprovados: window.listaAprovadosData, banner: bannerSalvo }); }
 
-// Funções do site
+// MODAL
 window.abrirModal = () => modalCadastro.classList.remove("hidden");
 window.fecharModal = () => modalCadastro.classList.add("hidden");
 window.abrirModalBanner = () => modalBanner.classList.remove("hidden");
@@ -179,7 +176,7 @@ window.aprovar = async (id)=>{
   const idx = espera.findIndex(p=>p.id===id);
   if(idx===-1) return;
   const j = espera.splice(idx,1)[0];
-  aprovados.push({name:j.nome,matches:0,kills:0});
+  aprovados.push({nome:j.nome,matches:0,kills:0});
   window.listaAprovadosData.push({nome:j.nome,fone:j.fone,email:j.email});
   await salvar();
 };
@@ -187,16 +184,16 @@ window.reprovar = async (id)=>{ espera=espera.filter(p=>p.id!==id); await salvar
 window.removerAprovado = async (email)=>{
   if(!confirm("Remover jogador da lista de aprovados?")) return;
   window.listaAprovadosData = window.listaAprovadosData.filter(p=>p.email!==email);
-  aprovados = aprovados.filter(p=>p.name!==window.listaAprovadosData.find(x=>x.email===email)?.nome);
+  aprovados = aprovados.filter(p=>p.nome!==window.listaAprovadosData.find(x=>x.email===email)?.nome);
   await salvar();
 };
 window.addScore = async (nome)=>{
   const k = parseInt(prompt("Kills","0"))||0;
-  const idx = aprovados.findIndex(p=>p.name===nome);
+  const idx = aprovados.findIndex(p=>p.nome===nome);
   if(idx>-1){ aprovados[idx].matches+=1; aprovados[idx].kills+=k; await salvar(); }
 };
 window.removerDoRank = async (nome)=>{
-  aprovados = aprovados.filter(p=>p.name!==nome);
+  aprovados = aprovados.filter(p=>p.nome!==nome);
   window.listaAprovadosData = window.listaAprovadosData.filter(p=>p.nome!==nome);
   await salvar();
 };
@@ -226,19 +223,18 @@ function renderRank(){
   aprovados.forEach((p,i)=>{
     rankBody.innerHTML+=`<tr class="border-b border-zinc-800">
       <td class="p-4">#${i+1}</td>
-      <td class="p-4">${p.name}</td>
+      <td class="p-4">${p.nome}</td>
       <td class="p-4 text-center">${p.matches}</td>
       <td class="p-4 text-center text-red-500">${p.kills}</td>
       <td class="p-4 text-right admin-only" style="display:${isAdmin?'block':'none'}">
-        <button onclick="addScore('${p.name}')" class="bg-blue-600 px-2 py-1 text-xs rounded">+K</button>
-        <button onclick="removerDoRank('${p.name}')" class="text-red-500 ml-2">X</button>
+        <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">+K</button>
+        <button onclick="removerDoRank('${p.nome}')" class="text-red-500 ml-2">X</button>
       </td>
     </tr>`;
   });
 }
 
 function renderAdmin(){
-  // Lista de espera
   listaEspera.innerHTML="";
   espera.forEach(p=>{
     listaEspera.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
@@ -250,7 +246,6 @@ function renderAdmin(){
     </div>`;
   });
 
-  // Lista de aprovados (Admin)
   listaAprovados.innerHTML="";
   window.listaAprovadosData.forEach(p=>{
     listaAprovados.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
@@ -260,6 +255,5 @@ function renderAdmin(){
   });
 }
 </script>
-
 </body>
 </html>
