@@ -12,7 +12,6 @@ body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
 .equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
 button{ cursor:pointer; }
 #infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
-input { outline: none; }
 </style>
 </head>
 <body class="pb-10">
@@ -23,12 +22,7 @@ input { outline: none; }
 
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
 <button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
-
-<div id="login-area" class="flex gap-2 items-center">
-  <input type="password" id="adminSenha" placeholder="Senha Admin" class="px-2 py-1 rounded text-black text-xs">
-  <button onclick="loginAdmin()" class="bg-yellow-600 px-3 py-1 rounded text-xs font-bold">Entrar</button>
-  <button onclick="logoutAdmin()" id="btnLogout" class="bg-red-600 px-3 py-1 rounded text-xs font-bold hidden">Sair</button>
-</div>
+<button onclick="loginAdmin()">Painel Admin</button>
 </nav>
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
@@ -136,21 +130,9 @@ window.solicitarEntrada = async ()=>{
 };
 
 window.loginAdmin = ()=>{
-  const senhaInput = document.getElementById("adminSenha").value;
-  if(senhaInput==="123"){
-    isAdmin=true;
-    document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block");
-    document.getElementById("btnLogout").classList.remove("hidden");
-    document.getElementById("adminSenha").classList.add("hidden");
-  } else if(senhaInput!=="") alert("Senha incorreta!");
-};
-
-window.logoutAdmin = ()=>{
-  isAdmin=false;
-  document.querySelectorAll(".admin-only").forEach(e=>e.style.display="none");
-  document.getElementById("btnLogout").classList.add("hidden");
-  document.getElementById("adminSenha").classList.remove("hidden");
-  document.getElementById("adminSenha").value="";
+  const senha = prompt("Senha Admin:");
+  if(senha==="123"){ isAdmin=true; document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block"); }
+  else if(senha!==null) alert("Senha incorreta!");
 };
 
 window.aprovar = async (id)=>{
@@ -185,6 +167,7 @@ window.sortearEquipes = ()=>{
   const equipes = Array.from({length:numEquipes}, ()=>[]);
   lista.forEach((player,index)=>equipes[index % numEquipes].push(player.nome));
 
+  // MOSTRA INFO DIRETO NA PÁGINA
   const infoDiv = document.getElementById("infoEquipes");
   infoDiv.textContent = `Total de jogadores: ${totalJogadores} | Número de equipes: ${numEquipes}`;
 
