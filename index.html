@@ -70,7 +70,7 @@
   <div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
     <h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
     <div class="space-y-4">
-      <input id="regNome" placeholder="Nick" class="w-full bg-black border border-zinc-700 p-3 rounded text-white" />
+      <input id="regNome" placeholder="Nome" class="w-full bg-black border border-zinc-700 p-3 rounded text-white" />
       <input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white" />
       <input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white" />
       <button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar</button>
@@ -116,14 +116,12 @@ window.listaAprovadosData = [];
 let bannerSalvo = "https://images.alphacoders.com";
 let isAdmin = false;
 
-// Inicializa Firestore
 async function inicializar() {
   const snap = await getDoc(docRef);
   if (!snap.exists()) await setDoc(docRef, { rank: [], espera: [], aprovados: [], banner: bannerSalvo });
 }
 await inicializar();
 
-// Atualização em tempo real
 onSnapshot(docRef, snap=>{
   if(snap.exists()){
     const d = snap.data();
@@ -136,19 +134,16 @@ onSnapshot(docRef, snap=>{
   }
 });
 
-// Salvar
 async function salvar() {
   await setDoc(docRef, { rank: aprovados, espera: espera, aprovados: window.listaAprovadosData, banner: bannerSalvo });
 }
 
-// Modals
 window.abrirModal = () => modalCadastro.classList.remove("hidden");
 window.fecharModal = () => modalCadastro.classList.add("hidden");
-
 window.abrirModalBanner = () => modalBanner.classList.remove("hidden");
 window.fecharModalBanner = () => modalBanner.classList.add("hidden");
 
-// Cadastro com verificação duplicados
+// Cadastro com duplicados bloqueados
 window.solicitarEntrada = async () => {
   const nome = regNome.value.trim();
   const email = regEmail.value.trim();
@@ -158,7 +153,7 @@ window.solicitarEntrada = async () => {
   const snap = await getDoc(docRef);
   const data = snap.exists()? snap.data() : {espera:[], aprovados:[]};
   const duplicado = [...data.espera, ...data.aprovados].some(p => p.nome===nome || p.fone===fone || p.email===email);
-  if(duplicado){ alert("❌ Este nick, telefone ou email já foi cadastrado!"); return; }
+  if(duplicado){ alert("❌ Este nome, telefone ou email já foi cadastrado!"); return; }
 
   espera.push({nome,email,fone,id:Date.now()});
   await salvar();
@@ -252,7 +247,6 @@ function renderAdmin(){
     </div>`;
   });
 }
-
 </script>
 
 </body>
