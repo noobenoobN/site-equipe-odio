@@ -12,7 +12,8 @@ body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
 .equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
 #infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
 button{ cursor:pointer; }
-#adminLoginPanel { display: none; } /* oculto por padrão */
+#adminLoginPanel { display: none; justify-content:center; margin:10px auto; max-width:400px; }
+#adminLoginPanel input { flex:1; }
 </style>
 </head>
 <body class="pb-10">
@@ -33,7 +34,7 @@ button{ cursor:pointer; }
 </nav>
 
 <!-- Painel de login admin, oculto até clicar -->
-<div id="adminLoginPanel" class="max-w-6xl mx-auto mt-4 flex gap-2 items-center">
+<div id="adminLoginPanel" class="flex gap-2 items-center">
   <input type="password" id="adminSenha" placeholder="Digite a senha" class="px-2 py-1 rounded text-black text-xs">
   <button onclick="loginAdmin()" class="bg-yellow-600 px-3 py-1 rounded text-xs font-bold">Entrar</button>
   <button onclick="logoutAdmin()" id="btnLogout" class="bg-red-600 px-3 py-1 rounded text-xs font-bold hidden">Sair</button>
