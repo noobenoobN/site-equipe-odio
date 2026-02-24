@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Equipe [ODIO]</title>
+<title>Equipe [ODIO] - Oficial</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -37,14 +37,6 @@ input[type="file"]{ font-size:10px; }
 
 <h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Lista de Aprovados</h3>
 <div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
-
-<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Editar Banner</h3>
-<input id="newBannerUrl" type="text" placeholder="URL da imagem" class="w-full bg-black border border-zinc-700 p-2 rounded text-white text-xs" />
-<input type="file" id="uploadBannerInput" />
-<div class="flex gap-2 mt-2">
-<button onclick="updateBannerUrl()" class="bg-yellow-600 px-4 py-2 text-black font-bold rounded flex-1">Usar URL</button>
-<button onclick="uploadBannerLocalFromInput()" class="bg-yellow-700 px-4 py-2 text-black font-bold rounded flex-1">Usar Arquivo</button>
-</div>
 </div>
 </section>
 
@@ -124,7 +116,6 @@ onSnapshot(docRef,snap=>{
   }
 });
 
-// Helpers
 function mostrarToast(msg){
   const t = document.getElementById("toast");
   t.textContent = msg;
@@ -133,7 +124,6 @@ function mostrarToast(msg){
 }
 async function salvar(){ await setDoc(docRef,{rank:aprovados,espera:espera,aprovados:listaAprovadosData,banner:bannerSalvo}); }
 
-// MODAIS
 window.abrirModal = ()=> modalCadastro.classList.remove("hidden");
 window.fecharModal = ()=> modalCadastro.classList.add("hidden");
 
@@ -166,7 +156,6 @@ window.aprovar = async (id)=>{
   const idx = espera.findIndex(p=>p.id===id);
   if(idx===-1) return;
   const j = espera.splice(idx,1)[0];
-  // Sincroniza corretamente
   const novo = {nome:j.nome,matches:0,kills:0};
   aprovados.push(novo);
   listaAprovadosData.push({nome:j.nome,fone:j.fone,email:j.email});
@@ -181,7 +170,6 @@ window.reprovar = async (id)=>{ espera=espera.filter(p=>p.id!==id); await salvar
 // REMOVER APROVADO
 window.removerAprovado = async (email)=>{
   if(!confirm("Remover jogador da lista de aprovados?")) return;
-  const p = listaAprovadosData.find(x=>x.email===email);
   listaAprovadosData = listaAprovadosData.filter(p=>p.email!==email);
   aprovados = aprovados.filter(p=>p.nome!==p?.nome);
   await salvar();
@@ -201,19 +189,6 @@ window.removerDoRank = async (nome)=>{
   aprovados = aprovados.filter(p=>p.nome!==nome);
   listaAprovadosData = listaAprovadosData.filter(p=>p.nome!==nome);
   await salvar(); renderRank(); renderAdmin();
-};
-
-// Banner
-window.updateBannerUrl = async ()=>{
-  const url = newBannerUrl.value.trim();
-  if(url){ bannerSalvo=url; document.getElementById("bannerImg").src=bannerSalvo; await salvar(); }
-};
-window.uploadBannerLocalFromInput = async ()=>{
-  const file = uploadBannerInput.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = async (ev)=>{ bannerSalvo=ev.target.result; document.getElementById("bannerImg").src=bannerSalvo; await salvar(); }
-  reader.readAsDataURL(file);
 };
 
 // RENDER
