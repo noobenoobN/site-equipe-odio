@@ -12,6 +12,10 @@
   body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
   .admin-only { display: none; }
   input[type="file"] { font-size: 10px; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0a0a; }
+  ::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #ff0000; }
 </style>
 </head>
 <body class="pb-10">
@@ -40,11 +44,11 @@
 
       <!-- Recrutas -->
       <h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas</h3>
-      <div id="listaEspera" class="space-y-2"></div>
+      <div id="listaEspera" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
       <!-- Lista de aprovados -->
       <h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Lista de Aprovados (Admin)</h3>
-      <div id="listaAprovados" class="space-y-2"></div>
+      <div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
     </div>
   </section>
 
@@ -70,10 +74,16 @@
   <div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
     <h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
     <div class="space-y-4">
-      <input id="regNome" placeholder="Nome" class="w-full bg-black border border-zinc-700 p-3 rounded text-white" />
-      <input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white" />
-      <input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white" />
-      <button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar</button>
+      <label class="text-xs text-zinc-400 uppercase">Nome</label>
+      <input id="regNome" placeholder="Digite seu nome" class="w-full bg-black border border-zinc-700 p-3 rounded text-white" />
+      
+      <label class="text-xs text-zinc-400 uppercase">Email</label>
+      <input id="regEmail" placeholder="Digite seu email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white" />
+      
+      <label class="text-xs text-zinc-400 uppercase">Telefone</label>
+      <input id="regFone" placeholder="Digite seu telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white" />
+      
+      <button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar Cadastro</button>
       <button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase">Fechar</button>
     </div>
   </div>
@@ -97,6 +107,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
+// CONFIG FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
   authDomain: "equipeodio-715f6.firebaseapp.com",
@@ -105,7 +116,6 @@ const firebaseConfig = {
   messagingSenderId: "399735990964",
   appId: "1:399735990964:web:6baa2428bc49c23d7845e1"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const docRef = doc(db, "site", "dados");
@@ -116,12 +126,14 @@ window.listaAprovadosData = [];
 let bannerSalvo = "https://images.alphacoders.com";
 let isAdmin = false;
 
+// Inicializa dados no Firebase caso não existam
 async function inicializar() {
   const snap = await getDoc(docRef);
   if (!snap.exists()) await setDoc(docRef, { rank: [], espera: [], aprovados: [], banner: bannerSalvo });
 }
 await inicializar();
 
+// Atualização em tempo real
 onSnapshot(docRef, snap=>{
   if(snap.exists()){
     const d = snap.data();
@@ -134,16 +146,16 @@ onSnapshot(docRef, snap=>{
   }
 });
 
-async function salvar() {
-  await setDoc(docRef, { rank: aprovados, espera: espera, aprovados: window.listaAprovadosData, banner: bannerSalvo });
-}
+// Salvar dados
+async function salvar() { await setDoc(docRef, { rank: aprovados, espera: espera, aprovados: window.listaAprovadosData, banner: bannerSalvo }); }
 
+// Funções do site
 window.abrirModal = () => modalCadastro.classList.remove("hidden");
 window.fecharModal = () => modalCadastro.classList.add("hidden");
 window.abrirModalBanner = () => modalBanner.classList.remove("hidden");
 window.fecharModalBanner = () => modalBanner.classList.add("hidden");
 
-// Cadastro com duplicados bloqueados
+// CADASTRO COM DUPLICADOS BLOQUEADOS
 window.solicitarEntrada = async () => {
   const nome = regNome.value.trim();
   const email = regEmail.value.trim();
@@ -162,7 +174,7 @@ window.solicitarEntrada = async () => {
   fecharModal();
 };
 
-// Admin
+// ADMIN
 window.aprovar = async (id)=>{
   const idx = espera.findIndex(p=>p.id===id);
   if(idx===-1) return;
