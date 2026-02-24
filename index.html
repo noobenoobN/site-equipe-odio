@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
 <style>
 body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
-.admin-only, #modalSenhaJogador { display: none; }
+.admin-only, #modalSenhaJogador, #modalLoginJogador { display: none; }
 .equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
 button{ cursor:pointer; }
 #infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
@@ -21,7 +21,7 @@ button{ cursor:pointer; }
 </section>
 
 <nav class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center p-6 bg-zinc-900 border-b border-zinc-800 space-y-2 md:space-y-0">
-<button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
+<button onclick="abrirModalCadastro()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
 
 <div class="flex flex-col md:flex-row items-start md:items-center">
   <button id="btnPainelAdmin" onclick="mostrarLoginAdmin()" class="bg-yellow-600 px-4 py-2 rounded text-xs font-bold uppercase">Painel Admin</button>
@@ -29,6 +29,10 @@ button{ cursor:pointer; }
     <input type="password" id="senhaAdminInput" placeholder="Digite a senha" class="px-3 py-2 rounded bg-black border border-zinc-700 text-white text-xs">
     <button onclick="verificarSenha()" class="bg-yellow-500 px-3 py-2 rounded text-xs font-bold">Entrar</button>
   </div>
+</div>
+
+<div class="flex flex-col md:flex-row items-start md:items-center mt-2">
+  <button onclick="abrirModalLoginJogador()" class="bg-blue-600 px-4 py-2 rounded text-xs font-bold uppercase">Entrar</button>
 </div>
 </nav>
 
@@ -64,7 +68,7 @@ button{ cursor:pointer; }
 </table>
 </div>
 
-<!-- MODAL CADASTRO -->
+<!-- MODAL ALISTAMENTO -->
 <div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
 <div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
 <h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
@@ -72,17 +76,33 @@ button{ cursor:pointer; }
 <input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
 <input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
 <button onclick="abrirModalSenhaJogador()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar Cadastro</button>
-<button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
+<button onclick="fecharModalCadastro()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
 </div>
 </div>
 
-<!-- MODAL CRIAR SENHA (substitui prompt) -->
+<!-- MODAL CRIAR SENHA (primeiro acesso) -->
 <div id="modalSenhaJogador" class="fixed inset-0 bg-black/90 flex items-center justify-center p-4">
 <div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
-<h2 class="text-2xl font-bold mb-6 text-center uppercase">Criar Senha</h2>
+<h2 class="text-2xl font-bold mb-6 text-center uppercase">Criar Senha e Clan</h2>
 <input type="password" id="senhaJogadorInput" placeholder="Senha alfanumérica mínima 6 dígitos" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<label class="flex items-center space-x-2 mb-2">
+  <input type="checkbox" id="temClan" class="w-4 h-4">
+  <span>Sou de Clan</span>
+</label>
+<input type="text" id="nomeClan" placeholder="Nome do Clan" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2 hidden">
 <button onclick="finalizarCadastro()" class="w-full bg-red-600 py-3 font-bold uppercase">Finalizar</button>
 <button onclick="fecharModalSenha()" class="w-full text-zinc-600 text-xs uppercase mt-2">Cancelar</button>
+</div>
+</div>
+
+<!-- MODAL LOGIN JOGADOR -->
+<div id="modalLoginJogador" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+<div class="bg-zinc-900 p-8 rounded border border-blue-600 max-w-md w-full">
+<h2 class="text-2xl font-bold mb-6 text-center uppercase">Login Jogador</h2>
+<input type="text" id="loginNome" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<input type="password" id="loginSenha" placeholder="Senha" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<button onclick="loginJogador()" class="w-full bg-blue-600 py-3 font-bold uppercase">Entrar</button>
+<button onclick="fecharModalLogin()" class="w-full text-zinc-600 text-xs uppercase mt-2">Cancelar</button>
 </div>
 </div>
 
@@ -104,7 +124,7 @@ const db = getFirestore(app);
 const docRef = doc(db,"site","dados");
 
 let aprovados=[], espera=[], listaAprovadosData=[], bannerSalvo="https://images.alphacoders.com", isAdmin=false;
-let jogadorTemp = {}; // guarda os dados do jogador antes de criar senha
+let jogadorTemp = {}; // guarda dados temporários antes de criar senha
 
 async function inicializar(){ 
   const snap = await getDoc(docRef);
@@ -120,18 +140,17 @@ onSnapshot(docRef, snap=>{
     listaAprovadosData = d.aprovados || [];
     bannerSalvo = d.banner || bannerSalvo;
     document.getElementById("bannerImg").src = bannerSalvo;
-    renderRank();
-    renderAdmin();
+    renderRank(); renderAdmin();
   }
 });
 
 async function salvar(){ await setDoc(docRef,{rank:aprovados,espera:espera,aprovados:listaAprovadosData,banner:bannerSalvo}); }
 
-// Modal Alistamento
-window.abrirModal = ()=> modalCadastro.classList.remove("hidden");
-window.fecharModal = ()=> modalCadastro.classList.add("hidden");
+// MODAL CADASTRO
+window.abrirModalCadastro = ()=> modalCadastro.classList.remove("hidden");
+window.fecharModalCadastro = ()=> modalCadastro.classList.add("hidden");
 
-// Abrir modal criar senha
+// MODAL SENHA JOGADOR
 window.abrirModalSenhaJogador = ()=>{
   const nome = regNome.value.trim();
   const email = regEmail.value.trim();
@@ -152,30 +171,61 @@ window.fecharModalSenha = ()=>{
   modalCadastro.classList.remove("hidden");
 };
 
-// Finalizar cadastro do jogador
+document.getElementById("temClan").addEventListener("change", e=>{
+  nomeClan.style.display = e.target.checked ? "block" : "none";
+});
+
 window.finalizarCadastro = async ()=>{
   const senha = senhaJogadorInput.value.trim();
+  const clan = document.getElementById("temClan").checked ? nomeClan.value.trim() : "";
   if(!senha || senha.length<6 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)){
     alert("Senha inválida"); return;
   }
+
   jogadorTemp.senha = senha;
+  jogadorTemp.clan = clan;
   espera.push(jogadorTemp);
   await salvar();
   jogadorTemp={};
-  senhaJogadorInput.value="";
+  senhaJogadorInput.value=""; nomeClan.value="";
   modalSenhaJogador.classList.add("hidden");
   alert("Pedido enviado com sucesso!");
 };
 
-// Admin login na página
+// LOGIN JOGADOR
+window.abrirModalLoginJogador = ()=> modalLoginJogador.classList.remove("hidden");
+window.fecharModalLogin = ()=> modalLoginJogador.classList.add("hidden");
+
+window.loginJogador = ()=>{
+  const nome = loginNome.value.trim();
+  const senha = loginSenha.value.trim();
+  const aprovado = listaAprovadosData.find(p=>p.nome===nome);
+
+  if(!aprovado){ alert("Você ainda não foi aprovado pelo admin!"); return; }
+
+  if(!aprovado.senha){
+    alert("Primeiro acesso! Crie sua senha no cadastro");
+    modalLoginJogador.classList.add("hidden");
+    regNome.value=aprovado.nome; regEmail.value=aprovado.email; regFone.value=aprovado.fone;
+    abrirModalSenhaJogador();
+    return;
+  }
+
+  if(senha !== aprovado.senha){ alert("Senha incorreta!"); return; }
+
+  alert(`Bem-vindo ${aprovado.nome}${aprovado.clan ? " do clan " + aprovado.clan : ""}!`);
+  modalLoginJogador.classList.add("hidden");
+};
+
+// ADMIN LOGIN NA PÁGINA
 window.mostrarLoginAdmin = ()=> document.getElementById("adminLoginContainer").style.display="flex";
 window.verificarSenha = ()=>{
-  const senha = document.getElementById("senhaAdminInput").value;
+  const senha = senhaAdminInput.value;
   if(senha==="123"){
     isAdmin=true;
     document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block");
     document.getElementById("adminLoginContainer").style.display="none";
-    document.getElementById("senhaAdminInput").value="";
+    senhaAdminInput.value="";
   } else { alert("Senha incorreta!"); }
 };
 
@@ -184,43 +234,16 @@ window.aprovar = async (id)=>{
   const idx = espera.findIndex(p => p.id == id);
   if(idx === -1) return;
   const jogador = espera.splice(idx, 1)[0];
-
-  if(!aprovados.some(p => p.nome === jogador.nome)){
-    aprovados.push({nome: jogador.nome, matches:0, kills:0});
-  }
-  if(!listaAprovadosData.some(p => p.email===jogador.email || p.fone===jogador.fone)){
-    listaAprovadosData.push(jogador);
-  }
-
-  await salvar();
-  renderRank(); renderAdmin();
-};
-
-window.reprovar = async (id)=>{
-  espera = espera.filter(p=>p.id!=id);
-  await salvar();
-  renderAdmin();
-};
-
-window.removerAprovado = async (email)=>{
-  listaAprovadosData = listaAprovadosData.filter(p=>p.email!==email);
-  const nomesAtuais = listaAprovadosData.map(p=>p.nome);
-  aprovados = aprovados.filter(p=>nomesAtuais.includes(p.nome));
-  await salvar();
-  renderRank(); renderAdmin();
-};
-
-// Rank
-window.addScore = async (nome)=>{
-  const k = parseInt(prompt("Kills","0"))||0;
-  const idx = aprovados.findIndex(p=>p.nome===nome);
-  if(idx>-1){ aprovados[idx].matches+=1; aprovados[idx].kills+=k; await salvar(); renderRank(); }
-};
-window.removerDoRank = async (nome)=>{
-  aprovados = aprovados.filter(p=>p.nome!==nome);
-  listaAprovadosData = listaAprovadosData.filter(p=>p.nome!==nome);
+  if(!aprovados.some(p => p.nome === jogador.nome)) aprovados.push({nome: jogador.nome, matches:0, kills:0});
+  if(!listaAprovadosData.some(p => p.email===jogador.email || p.fone===jogador.fone)) listaAprovadosData.push(jogador);
   await salvar(); renderRank(); renderAdmin();
 };
+window.reprovar = async (id)=>{ espera = espera.filter(p=>p.id!=id); await salvar(); renderAdmin(); };
+window.removerAprovado = async (email)=>{ listaAprovadosData = listaAprovadosData.filter(p=>p.email!==email); const nomesAtuais = listaAprovadosData.map(p=>p.nome); aprovados = aprovados.filter(p=>nomesAtuais.includes(p.nome)); await salvar(); renderRank(); renderAdmin(); };
+
+// Rank
+window.addScore = async (nome)=>{ const k=parseInt(prompt("Kills","0"))||0; const idx=aprovados.findIndex(p=>p.nome===nome); if(idx>-1){ aprovados[idx].matches+=1; aprovados[idx].kills+=k; await salvar(); renderRank(); } };
+window.removerDoRank = async (nome)=>{ aprovados = aprovados.filter(p=>p.nome!==nome); listaAprovadosData = listaAprovadosData.filter(p=>p.nome!==nome); await salvar(); renderRank(); renderAdmin(); };
 
 // Sorteador
 window.sortearEquipes = ()=>{
@@ -229,23 +252,15 @@ window.sortearEquipes = ()=>{
   let numEquipes = total<8 ? 2 : parseInt(prompt("Quantas equipes criar?"));
   if(isNaN(numEquipes) || numEquipes<1) numEquipes=1;
   if(numEquipes>total) numEquipes=total;
-
   const lista = [...aprovados].sort(()=>Math.random()-0.5);
   const equipes = Array.from({length:numEquipes},()=>[]);
   lista.forEach((p,i)=>equipes[i%numEquipes].push(p.nome));
-
   const infoDiv = document.getElementById("infoEquipes");
   infoDiv.textContent = `Total de jogadores: ${total} | Número de equipes: ${numEquipes}`;
-
   const cores = ["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400","bg-purple-500","bg-orange-400"];
   const container = document.getElementById("equipesContainer");
   container.innerHTML="";
-  equipes.forEach((eq,i)=>{
-    const div = document.createElement("div");
-    div.className=`equipe ${cores[i%cores.length]} p-2 mb-2`;
-    div.textContent=`Equipe ${i+1}: ${eq.join(", ")}`;
-    container.appendChild(div);
-  });
+  equipes.forEach((eq,i)=>{ const div=document.createElement("div"); div.className=`equipe ${cores[i%cores.length]} p-2 mb-2`; div.textContent=`Equipe ${i+1}: ${eq.join(", ")}`; container.appendChild(div); });
 };
 
 // Render
@@ -267,26 +282,9 @@ function renderRank(){
 
 function renderAdmin(){
   contagemAprovados.textContent=`(${listaAprovadosData.length} jogador(es))`;
-
   listaEspera.innerHTML="";
   espera.forEach(p=>{
     listaEspera.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
       <div>${p.nome} - ${p.fone}</div>
       <div>
-        <button onclick="aprovar('${p.id}')" class="bg-green-600 px-2 py-1 text-xs">V</button>
-        <button onclick="reprovar('${p.id}')" class="bg-red-600 px-2 py-1 text-xs">X</button>
-      </div>
-    </div>`;
-  });
-
-  listaAprovados.innerHTML="";
-  listaAprovadosData.forEach(p=>{
-    listaAprovados.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
-      <span>${p.nome} - ${p.fone}</span>
-      <button onclick="removerAprovado('${p.email}')" class="bg-red-600 px-2 py-1 text-xs">Remover</button>
-    </div>`;
-  });
-}
-</script>
-</body>
-</html>
+        <button onclick="aprovar('${p.id}')" class="bg-green-600 px-2 py-1 text-xs">V</
