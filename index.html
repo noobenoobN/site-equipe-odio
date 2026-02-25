@@ -10,22 +10,26 @@
 <style>
 body{background:#0b0b0b;color:#fff;font-family:Arial;}
 .admin-only{display:none;}
-.admin-active .admin-only{display:table-cell;}
+.admin-active .admin-only{display:inline-block;}
+.admin-active .admin-table{display:table-cell;}
 .admin-active #btnLogout{display:inline-block;}
 #btnLogout{display:none;}
-button{cursor:pointer;padding:4px 8px;border-radius:4px;}
+button{cursor:pointer;padding:6px 10px;border-radius:4px;background:#222;}
+table{margin-top:20px;}
 </style>
 </head>
-
 <body>
 
-<h1 style="text-align:center;padding:20px;">Equipe ODIO</h1>
+<img id="bannerImg" src="" style="width:100%;height:250px;object-fit:cover;">
 
-<div style="text-align:center;margin-bottom:20px;">
+<h1 style="text-align:center;padding:15px;">Equipe ODIO</h1>
+
+<div style="text-align:center;">
 <button onclick="abrirModal()">Alistar-se</button>
 <button onclick="abrirLogin()">Login</button>
 <button onclick="loginAdmin()">Admin</button>
 <button id="btnLogout" onclick="logoutAdmin()">Sair</button>
+<button class="admin-only" onclick="alterarBanner()">Alterar Banner</button>
 </div>
 
 <table border="1" width="100%" cellpadding="8">
@@ -35,13 +39,16 @@ button{cursor:pointer;padding:4px 8px;border-radius:4px;}
 <th>Nome</th>
 <th>Partidas</th>
 <th>Kills</th>
-<th class="admin-only">Ações</th>
+<th class="admin-table">Ações</th>
 </tr>
 </thead>
 <tbody id="rankBody"></tbody>
 </table>
 
 <div class="admin-only" style="margin-top:20px;text-align:center;">
+<h3>Pendentes</h3>
+<div id="pendentes"></div>
+
 <button onclick="sortearEquipes()">Sortear Times</button>
 <div id="equipesContainer"></div>
 </div>
@@ -49,25 +56,16 @@ button{cursor:pointer;padding:4px 8px;border-radius:4px;}
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { 
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } 
+from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
 
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  onSnapshot,
-  updateDoc,
-  doc,
-  query,
-  where,
-  getDocs
+import { 
+getFirestore, collection, addDoc, onSnapshot,
+updateDoc, doc, query, where, getDocs,
+deleteDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-/* SEU FIREBASE */
+/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
   authDomain: "equipeodio-715f6.firebaseapp.com",
@@ -82,13 +80,27 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 let aprovados=[];
+let pendentes=[];
 
-/* ================= LER APROVADOS EXISTENTES ================= */
+/* ================= BANNER ================= */
+const siteRef = doc(db,"site","dados");
+
+onSnapshot(siteRef, async snap=>{
+  if(!snap.exists()){
+    await setDoc(siteRef,{banner:""});
+    return;
+  }
+  const d=snap.data();
+  if(d.banner) document.getElementById("bannerImg").src=d.banner;
+});
+
+/* ================= LER JOGADORES ================= */
 onSnapshot(collection(db,"alistamentos"), snap=>{
   aprovados=[];
+  pendentes=[];
 
   snap.forEach(docSnap=>{
-    const d = docSnap.data();
+    const d=docSnap.data();
 
     if(d.aprovado===true){
       aprovados.push({
@@ -98,80 +110,89 @@ onSnapshot(collection(db,"alistamentos"), snap=>{
         matches:d.matches||0,
         kills:d.kills||0
       });
+    }else{
+      pendentes.push({
+        id:docSnap.id,
+        nome:d.nome
+      });
     }
   });
 
   renderRank();
+  renderPendentes();
 });
 
 /* ================= ALISTAR ================= */
 window.abrirModal = async ()=>{
-  const nome = prompt("Nome no COD:");
-  const email = prompt("Seu Email:");
-
-  if(!nome || !email) return alert("Preencha tudo");
+  const nome=prompt("Nome no COD:");
+  const email=prompt("Email:");
+  if(!nome||!email) return alert("Preencha tudo");
 
   await addDoc(collection(db,"alistamentos"),{
-    nome,
-    email,
-    aprovado:false,
-    matches:0,
-    kills:0
+    nome,email,aprovado:false,matches:0,kills:0
   });
 
-  alert("Pedido enviado! Aguarde aprovação.");
+  alert("Pedido enviado!");
 };
 
 /* ================= LOGIN ================= */
 window.abrirLogin = async ()=>{
-  const email = prompt("Digite seu email:");
+  const email=prompt("Digite seu email:");
   if(!email) return;
 
-  const q = query(
-    collection(db,"alistamentos"),
-    where("email","==",email),
-    where("aprovado","==",true)
-  );
+  const q=query(collection(db,"alistamentos"),
+  where("email","==",email),
+  where("aprovado","==",true));
 
-  const snap = await getDocs(q);
+  const snap=await getDocs(q);
 
-  if(snap.empty){
-    return alert("Você não foi aprovado ainda.");
-  }
+  if(snap.empty) return alert("Não aprovado.");
 
-  const senha = prompt("Digite sua senha:");
+  const senha=prompt("Senha:");
 
   try{
     await signInWithEmailAndPassword(auth,email,senha);
-    alert("Login realizado!");
-  }
-  catch(e){
-
+    alert("Login OK");
+  }catch(e){
     if(e.code==="auth/user-not-found"){
-      const novaSenha = prompt("Primeiro acesso! Crie uma senha (mín 6 caracteres):");
-
-      if(!novaSenha || novaSenha.length<6)
-        return alert("Senha fraca!");
-
-      await createUserWithEmailAndPassword(auth,email,novaSenha);
-      alert("Conta criada! Agora faça login novamente.");
-    }
-    else{
-      alert("Erro: "+e.message);
+      const nova=prompt("Primeiro acesso - crie senha:");
+      if(!nova||nova.length<6) return alert("Senha fraca");
+      await createUserWithEmailAndPassword(auth,email,nova);
+      alert("Conta criada. Faça login novamente.");
+    }else{
+      alert(e.message);
     }
   }
 };
 
 /* ================= ADMIN ================= */
-window.loginAdmin = ()=>{
-  const senha = prompt("Senha Admin:");
+window.loginAdmin=()=>{
+  const senha=prompt("Senha admin:");
   if(senha==="123"){
     document.body.classList.add("admin-active");
   }
 };
 
-window.logoutAdmin = ()=>{
+window.logoutAdmin=()=>{
   document.body.classList.remove("admin-active");
+};
+
+window.alterarBanner=async()=>{
+  const url=prompt("Nova URL do banner:");
+  if(!url) return;
+  await updateDoc(siteRef,{banner:url});
+};
+
+/* ================= APROVAR ================= */
+window.aprovar=async(id)=>{
+  await updateDoc(doc(db,"alistamentos",id),{aprovado:true});
+};
+
+/* ================= REMOVER ================= */
+window.remover=async(id)=>{
+  if(confirm("Remover jogador?")){
+    await deleteDoc(doc(db,"alistamentos",id));
+  }
 };
 
 /* ================= RENDER ================= */
@@ -179,8 +200,7 @@ function renderRank(){
   const body=document.getElementById("rankBody");
   body.innerHTML="";
 
-  aprovados
-  .sort((a,b)=>b.kills-a.kills)
+  aprovados.sort((a,b)=>b.kills-a.kills)
   .forEach((p,i)=>{
     body.innerHTML+=`
     <tr>
@@ -188,30 +208,40 @@ function renderRank(){
       <td>${p.nome}</td>
       <td>${p.matches}</td>
       <td>${p.kills}</td>
-      <td class="admin-only">
+      <td class="admin-table">
         <button onclick="addScore('${p.id}')">+K</button>
+        <button onclick="remover('${p.id}')">X</button>
       </td>
     </tr>`;
   });
 }
 
-/* ================= ADD SCORE ================= */
-window.addScore = async id=>{
-  const k=parseInt(prompt("Quantas kills?","0"))||0;
+function renderPendentes(){
+  const div=document.getElementById("pendentes");
+  div.innerHTML="";
+  pendentes.forEach(p=>{
+    div.innerHTML+=`
+    <p>${p.nome}
+    <button onclick="aprovar('${p.id}')">Aprovar</button>
+    </p>`;
+  });
+}
 
-  const jogador=aprovados.find(p=>p.id===id);
-  if(!jogador) return;
+/* ================= ADD SCORE ================= */
+window.addScore=async(id)=>{
+  const k=parseInt(prompt("Kills?","0"))||0;
+  const j=aprovados.find(p=>p.id===id);
+  if(!j) return;
 
   await updateDoc(doc(db,"alistamentos",id),{
-    matches:jogador.matches+1,
-    kills:jogador.kills+k
+    matches:j.matches+1,
+    kills:j.kills+k
   });
 };
 
 /* ================= SORTEADOR ================= */
-window.sortearEquipes = ()=>{
-  if(aprovados.length<2)
-    return alert("Precisa de pelo menos 2 jogadores");
+window.sortearEquipes=()=>{
+  if(aprovados.length<2) return alert("Precisa de 2");
 
   const lista=[...aprovados].sort(()=>Math.random()-0.5);
   const metade=Math.ceil(lista.length/2);
@@ -225,6 +255,5 @@ window.sortearEquipes = ()=>{
 };
 
 </script>
-
 </body>
 </html>
