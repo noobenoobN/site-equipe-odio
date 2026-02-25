@@ -9,29 +9,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
-body { font-family:'Oswald',sans-serif;background:#050505;color:#eee;}
+body{font-family:'Oswald',sans-serif;background:#050505;color:#eee;}
 
-.admin-only { display:none; }
-.admin-active .admin-only { display:revert; }
+.admin-only{display:none;}
+.admin-active .admin-only{display:revert;}
 
-#btnLogout { display:none; }
-.admin-active #btnLogout { display:inline-block; }
+#btnLogout{display:none;}
+.admin-active #btnLogout{display:inline-block;}
 
-.equipe { padding:10px;margin:5px 0;border-radius:8px;color:#000;}
-
+.equipe{padding:10px;margin:5px 0;border-radius:8px;color:#000;}
 button{cursor:pointer;}
 </style>
 </head>
-<body class="pb-10">
+<body>
 
 <!-- BANNER -->
 <section class="relative w-full h-[300px] md:h-[400px] bg-zinc-900 border-b-4 border-red-600">
-<img id="bannerImg" src="" class="w-full h-full object-cover opacity-60">
+<img id="bannerImg" class="w-full h-full object-cover opacity-60">
 </section>
 
 <!-- NAV -->
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
-
 <div class="flex gap-4">
 <button onclick="adicionarJogador()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
 Alistar-se
@@ -44,28 +42,11 @@ Alistar-se
 Sair
 </button>
 </div>
-
 </nav>
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
 
-<!-- ADMIN PANEL -->
 <section class="admin-only bg-zinc-900 p-6 rounded border-2 border-yellow-600 space-y-6">
-
-<h3 class="text-yellow-500 font-bold uppercase">Alterar Banner</h3>
-
-<input type="file" id="bannerLocal" accept="image/*" class="mb-2 text-xs">
-<button onclick="uploadLocalBanner()" class="bg-green-600 px-3 py-1 text-xs rounded">Imagem Local</button>
-
-<div class="mt-3">
-<input id="bannerLink" placeholder="Link da imagem online"
-class="w-full bg-black border border-zinc-700 p-2 text-white mb-2">
-<button onclick="usarLinkBanner()" class="bg-blue-600 px-3 py-1 text-xs rounded">
-Usar Link
-</button>
-</div>
-
-<hr class="border-zinc-700">
 
 <h3 class="text-yellow-500 font-bold uppercase">Lista de Aprovados</h3>
 <div id="listaAprovados" class="space-y-2"></div>
@@ -80,7 +61,6 @@ Sortear Times
 
 </section>
 
-<!-- RANK -->
 <div class="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
 <table class="w-full text-left">
 <thead class="bg-black text-zinc-500 text-xs uppercase">
@@ -99,9 +79,8 @@ Sortear Times
 </main>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot } from
+import { getFirestore, doc, setDoc, onSnapshot } from
 "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -115,29 +94,22 @@ const db = getFirestore(app);
 const docRef = doc(db,"site","dados");
 
 let aprovados=[];
-let bannerSalvo="";
 
-const snap = await getDoc(docRef);
-if(!snap.exists()){
-  await setDoc(docRef,{rank:[],banner:""});
-}
-
+/* LISTENER DIRETO (SEM await) */
 onSnapshot(docRef, snap=>{
-  if(snap.exists()){
-    const d=snap.data();
-    aprovados=d.rank||[];
-    bannerSalvo=d.banner||"";
-    bannerImg.src=bannerSalvo;
-    renderRank();
-    renderLista();
+  if(!snap.exists()){
+    setDoc(docRef,{rank:[]});
+    return;
   }
+
+  aprovados=snap.data().rank||[];
+  renderRank();
+  renderLista();
 });
 
-async function salvar(){
-  await setDoc(docRef,{
-    rank:aprovados,
-    banner:bannerSalvo
-  },{merge:true});
+/* SALVAR */
+function salvar(){
+  setDoc(docRef,{rank:aprovados},{merge:true});
 }
 
 /* ADMIN */
@@ -153,18 +125,18 @@ window.logoutAdmin=()=>{
 };
 
 /* ADICIONAR */
-window.adicionarJogador=async()=>{
-  const nome=prompt("Nome do jogador:");
+window.adicionarJogador=()=>{
+  const nome=prompt("Nome:");
   if(!nome) return;
   aprovados.push({nome,matches:0,kills:0});
-  await salvar();
+  salvar();
 };
 
 /* REMOVER */
-window.removerJogador=async(nome)=>{
-  if(!confirm("Remover jogador?")) return;
+window.removerJogador=(nome)=>{
+  if(!confirm("Remover?")) return;
   aprovados=aprovados.filter(p=>p.nome!==nome);
-  await salvar();
+  salvar();
 };
 
 /* RENDER LISTA */
@@ -174,7 +146,7 @@ function renderLista(){
     listaAprovados.innerHTML+=`
     <div class="flex justify-between bg-black p-2 rounded">
       <span>${p.nome}</span>
-      <button onclick="removerJogador('${p.nome}')"
+      <button onclick="removerJogador('${p.nome}')" 
       class="bg-red-600 px-2 text-xs rounded admin-only">
       Remover
       </button>
@@ -183,13 +155,13 @@ function renderLista(){
 }
 
 /* RANK */
-window.addScore=async(nome)=>{
+window.addScore=(nome)=>{
   const k=parseInt(prompt("Kills","0"))||0;
   const idx=aprovados.findIndex(p=>p.nome===nome);
   if(idx>-1){
     aprovados[idx].matches+=1;
     aprovados[idx].kills+=k;
-    await salvar();
+    salvar();
   }
 };
 
@@ -205,7 +177,8 @@ function renderRank(){
       <td class="p-4 text-center">${p.matches}</td>
       <td class="p-4 text-center text-red-500">${p.kills}</td>
       <td class="p-4 text-right admin-only">
-        <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">
+        <button onclick="addScore('${p.nome}')" 
+        class="bg-blue-600 px-2 py-1 text-xs rounded">
         +K
         </button>
       </td>
@@ -213,32 +186,16 @@ function renderRank(){
   });
 }
 
-/* BANNER */
-window.uploadLocalBanner=()=>{
-  const file=bannerLocal.files[0];
-  if(!file) return;
-  const reader=new FileReader();
-  reader.onload=async e=>{
-    bannerSalvo=e.target.result;
-    await salvar();
-  };
-  reader.readAsDataURL(file);
-};
-
-window.usarLinkBanner=async()=>{
-  const link=bannerLink.value.trim();
-  if(!link) return;
-  bannerSalvo=link;
-  await salvar();
-};
-
 /* SORTEADOR */
 window.sortearEquipes=()=>{
   if(aprovados.length<2) return alert("Precisa de 2 jogadores");
+
   const lista=[...aprovados].sort(()=>Math.random()-0.5);
   const meio=Math.ceil(lista.length/2);
+
   const t1=lista.slice(0,meio).map(p=>p.nome);
   const t2=lista.slice(meio).map(p=>p.nome);
+
   equipesContainer.innerHTML=`
   <div class="equipe bg-red-500">Equipe 1: ${t1.join(", ")}</div>
   <div class="equipe bg-blue-500">Equipe 2: ${t2.join(", ")}</div>`;
