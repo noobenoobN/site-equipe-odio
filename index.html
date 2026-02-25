@@ -4,29 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Equipe [ODIO] - Oficial</title>
-
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
-
 <style>
-body { font-family: 'Oswald', sans-serif; background:#050505; color:#eee; }
-
-.admin-only { display:none; }
-.admin-active .admin-only { display:revert; }
-
-#btnLogout { display:none; }
-.admin-active #btnLogout { display:inline-block; }
-
-.equipe { padding:10px; margin:5px 0; border-radius:8px; color:#000; }
-
+body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
+.admin-only { display: none; }
+.equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
 button{ cursor:pointer; }
-#infoEquipes { margin-bottom:10px; font-weight:bold; color:#fff; }
+#infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
 </style>
 </head>
-
 <body class="pb-10">
 
-<!-- BANNER -->
 <section class="relative w-full h-[300px] md:h-[400px] bg-zinc-900 border-b-4 border-red-600">
 <img id="bannerImg" src="https://images.alphacoders.com" class="w-full h-full object-cover opacity-60">
 </section>
@@ -44,47 +33,32 @@ Login
 </button>
 </div>
 
-<div class="flex gap-3">
 <button onclick="loginAdmin()">Painel Admin</button>
-<button id="btnLogout" onclick="logoutAdmin()" class="text-red-600 text-xs uppercase font-bold">
-Sair
-</button>
-</div>
-
 </nav>
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
 
-<!-- ADMIN PANEL -->
-<section class="admin-only space-y-6">
+<section id="adminPanel" class="admin-only space-y-6">
 <div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
 
-<h3 class="text-yellow-500 font-bold uppercase mb-3">Alterar Banner</h3>
+<h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas (Aprovar / Reprovar)</h3>
+<div id="listaEspera" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
-<input type="file" id="bannerLocal" accept="image/*" class="mb-2 text-xs">
-<button onclick="uploadLocalBanner()" class="bg-green-600 px-3 py-1 text-xs rounded">Imagem Local</button>
+<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">
+Lista de Aprovados <span id="contagemAprovados" class="text-white text-xs"></span>
+</h3>
+<div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
 
-<div class="mt-3">
-<input id="bannerLink" placeholder="Link da imagem online"
-class="w-full bg-black border border-zinc-700 p-2 text-white mb-2">
-<button onclick="usarLinkBanner()" class="bg-blue-600 px-3 py-1 text-xs rounded">
-Usar Link
-</button>
-</div>
-
-<hr class="my-4 border-zinc-700">
-
-<h3 class="text-yellow-500 font-bold mb-3 uppercase">Sorteador de Equipes</h3>
+<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Sorteador de Equipes</h3>
+<div id="infoEquipes"></div>
 <button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">
 Sortear Times
 </button>
-
 <div id="equipesContainer" class="mt-2"></div>
 
 </div>
 </section>
 
-<!-- RANK -->
 <div class="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
 <table class="w-full text-left">
 <thead class="bg-black text-zinc-500 text-xs uppercase">
@@ -100,131 +74,246 @@ Sortear Times
 </table>
 </div>
 
-</main>
+<!-- MODAL CADASTRO -->
+<div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+<div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
+<h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
+<input id="regNome" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar Cadastro</button>
+<button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
+</div>
+</div>
+
+<!-- MODAL LOGIN -->
+<div id="modalLogin" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+<div class="bg-zinc-900 p-8 rounded border border-blue-600 max-w-md w-full">
+<h2 class="text-2xl font-bold mb-6 text-center uppercase">Login</h2>
+<input id="loginEmail" placeholder="Email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<input id="loginSenha" type="password" placeholder="Senha" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<button onclick="fazerLogin()" class="w-full bg-blue-600 py-3 font-bold uppercase">Entrar</button>
+<button onclick="fecharLogin()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
+</div>
+</div>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot } from
-"https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY_AQUI",
-  authDomain: "SUA_AUTH_DOMAIN",
-  projectId: "SUA_PROJECT_ID"
+  apiKey: "AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
+  authDomain: "equipeodio-715f6.firebaseapp.com",
+  projectId: "equipeodio-715f6",
+  storageBucket: "equipeodio-715f6.firebasestorage.app",
+  messagingSenderId: "399735990964",
+  appId: "1:399735990964:web:6baa2428bc49c23d7845e1"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const docRef = doc(db,"site","dados");
 
-let aprovados=[];
-let bannerSalvo="https://images.alphacoders.com";
+let aprovados=[], espera=[], listaAprovadosData=[], bannerSalvo="https://images.alphacoders.com", isAdmin=false;
 
-/* INICIALIZAÇÃO */
-const snap = await getDoc(docRef);
-if(!snap.exists()){
-  await setDoc(docRef,{rank:[],banner:bannerSalvo});
+async function inicializar(){ 
+  const snap = await getDoc(docRef);
+  if(!snap.exists()) await setDoc(docRef,{rank:[],espera:[],aprovados:[],banner:bannerSalvo});
 }
+await inicializar();
 
-/* LISTENER */
 onSnapshot(docRef, snap=>{
   if(snap.exists()){
     const d = snap.data();
-    aprovados = d.rank || [];
-    bannerSalvo = d.banner || bannerSalvo;
-    bannerImg.src = bannerSalvo;
-    renderRank();
+    aprovados=d.rank||[];
+    espera=d.espera||[];
+    listaAprovadosData=d.aprovados||[];
+    bannerSalvo=d.banner||bannerSalvo;
+    document.getElementById("bannerImg").src=bannerSalvo;
+    renderRank(); 
+    renderAdmin();
   }
 });
 
-/* SALVAR */
 async function salvar(){
   await setDoc(docRef,{
     rank:aprovados,
+    espera:espera,
+    aprovados:listaAprovadosData,
     banner:bannerSalvo
-  },{merge:true});
+  });
 }
 
-/* ADMIN */
+window.abrirModal = ()=> modalCadastro.classList.remove("hidden");
+window.fecharModal = ()=> modalCadastro.classList.add("hidden");
+
+window.abrirLogin = ()=> modalLogin.classList.remove("hidden");
+window.fecharLogin = ()=> modalLogin.classList.add("hidden");
+
+/* ===== CADASTRO ===== */
+window.solicitarEntrada = async ()=>{
+  const nome=regNome.value.trim();
+  const email=regEmail.value.trim();
+  const fone=regFone.value.trim();
+
+  if(!nome||!email||!fone){ alert("Preencha todos os campos!"); return; }
+
+  const duplicado=[...espera,...listaAprovadosData]
+  .some(p=>p.nome===nome || p.email===email || p.fone===fone);
+
+  if(duplicado){ alert("Já cadastrado!"); return; }
+
+  const clanConfirm = confirm("Você é de algum clan?");
+  let clan="";
+  if(clanConfirm){
+    clan = prompt("Qual nome do clan?");
+  }
+
+  espera.push({nome,email,fone,clan,senha:"",id:Date.now()});
+  await salvar();
+  alert("Pedido enviado com sucesso!");
+  fecharModal();
+};
+
+/* ===== LOGIN ===== */
+window.fazerLogin = async ()=>{
+  const email = loginEmail.value.trim();
+  const senha = loginSenha.value.trim();
+
+  const usuario = listaAprovadosData.find(p=>p.email===email);
+
+  if(!usuario){ alert("Usuário não aprovado!"); return; }
+
+  if(!usuario.senha){
+    const nova = prompt("Primeiro acesso! Crie senha alfanumérica (mín 6)");
+    if(!nova || nova.length<6 || !/\d/.test(nova) || !/[a-zA-Z]/.test(nova)){
+      alert("Senha inválida"); return;
+    }
+    usuario.senha=nova;
+    await salvar();
+    alert("Senha criada! Faça login novamente.");
+    return;
+  }
+
+  if(usuario.senha!==senha){ alert("Senha incorreta!"); return; }
+
+  alert("Login realizado com sucesso!");
+  fecharLogin();
+};
+
+/* ===== ADMIN ===== */
 window.loginAdmin = ()=>{
   const senha = prompt("Senha Admin:");
   if(senha==="123"){
-    document.body.classList.add("admin-active");
+    isAdmin=true;
+    document.querySelectorAll(".admin-only")
+    .forEach(e=>e.style.display="block");
   } else if(senha!==null){
     alert("Senha incorreta!");
   }
 };
 
-window.logoutAdmin = ()=>{
-  document.body.classList.remove("admin-active");
+/* ===== RESTO DO SISTEMA ORIGINAL ===== */
+
+window.aprovar = async (id)=>{
+  const idx=espera.findIndex(p=>p.id===id);
+  if(idx===-1) return;
+  const j=espera.splice(idx,1)[0];
+  const novo={nome:j.nome,matches:0,kills:0};
+  aprovados.push(novo);
+  listaAprovadosData.push(j);
+  await salvar(); renderRank(); renderAdmin();
 };
 
-/* BANNER */
-window.uploadLocalBanner = ()=>{
-  const file = bannerLocal.files[0];
-  if(!file) return alert("Selecione imagem");
-
-  const reader = new FileReader();
-  reader.onload = async e=>{
-    bannerSalvo = e.target.result;
-    await salvar();
-  };
-  reader.readAsDataURL(file);
+window.reprovar = async (id)=>{
+  espera=espera.filter(p=>p.id!==id);
+  await salvar(); renderAdmin();
 };
 
-window.usarLinkBanner = async ()=>{
-  const link = bannerLink.value.trim();
-  if(!link) return alert("Link inválido");
-  bannerSalvo = link;
-  await salvar();
+window.removerAprovado = async (email)=>{
+  listaAprovadosData=listaAprovadosData.filter(p=>p.email!==email);
+  aprovados=aprovados.filter(p=>p.nome!==email);
+  await salvar(); renderRank(); renderAdmin();
 };
 
-/* RANK */
-window.addScore = async nome=>{
+window.addScore = async (nome)=>{
   const k=parseInt(prompt("Kills","0"))||0;
   const idx=aprovados.findIndex(p=>p.nome===nome);
   if(idx>-1){
     aprovados[idx].matches+=1;
     aprovados[idx].kills+=k;
-    await salvar();
+    await salvar(); renderRank();
   }
+};
+
+window.removerDoRank = async (nome)=>{
+  aprovados=aprovados.filter(p=>p.nome!==nome);
+  listaAprovadosData=listaAprovadosData.filter(p=>p.nome!==nome);
+  await salvar(); renderRank(); renderAdmin();
+};
+
+window.sortearEquipes = ()=>{
+  const totalJogadores = aprovados.length;
+  if(totalJogadores < 2){ alert("Precisa de pelo menos 2 jogadores"); return; }
+
+  let numEquipes = totalJogadores < 8 ? 2 : parseInt(prompt("Quantas equipes criar?"));
+  if(isNaN(numEquipes) || numEquipes<1) numEquipes=1;
+  if(numEquipes>totalJogadores) numEquipes = totalJogadores;
+
+  const lista = [...aprovados].sort(() => Math.random()-0.5);
+  const equipes = Array.from({length:numEquipes}, ()=>[]);
+  lista.forEach((player,index)=>equipes[index % numEquipes].push(player.nome));
+
+  infoEquipes.textContent = `Total de jogadores: ${totalJogadores} | Número de equipes: ${numEquipes}`;
+
+  const cores = ["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400","bg-purple-500","bg-orange-400"];
+  equipesContainer.innerHTML="";
+  equipes.forEach((eq,i)=>{
+    const div = document.createElement("div");
+    div.className = `equipe ${cores[i % cores.length]} p-2 mb-2`;
+    div.textContent = `Equipe ${i+1}: ${eq.join(", ")}`;
+    equipesContainer.appendChild(div);
+  });
 };
 
 function renderRank(){
   rankBody.innerHTML="";
   aprovados.forEach((p,i)=>{
-    rankBody.innerHTML+=`
-    <tr class="border-b border-zinc-800">
+    rankBody.innerHTML+=`<tr class="border-b border-zinc-800">
       <td class="p-4">#${i+1}</td>
       <td class="p-4">${p.nome}</td>
-      <td class="p-4 text-center">${p.matches||0}</td>
-      <td class="p-4 text-center text-red-500">${p.kills||0}</td>
-      <td class="p-4 text-right admin-only">
-        <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">
-        +K
-        </button>
+      <td class="p-4 text-center">${p.matches}</td>
+      <td class="p-4 text-center text-red-500">${p.kills}</td>
+      <td class="p-4 text-right admin-only" style="display:${isAdmin?'block':'none'}">
+        <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">+K</button>
+        <button onclick="removerDoRank('${p.nome}')" class="text-red-500 ml-2">X</button>
       </td>
     </tr>`;
   });
 }
 
-/* SORTEADOR */
-window.sortearEquipes = ()=>{
-  if(aprovados.length < 2) return alert("Precisa de pelo menos 2 jogadores");
+function renderAdmin(){
+  contagemAprovados.textContent=`(${listaAprovadosData.length} jogador(es))`;
 
-  const lista = [...aprovados].sort(()=>Math.random()-0.5);
-  const metade = Math.ceil(lista.length/2);
+  listaEspera.innerHTML="";
+  espera.forEach(p=>{
+    listaEspera.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
+      <div>${p.nome} - ${p.fone}</div>
+      <div>
+        <button onclick="aprovar(${p.id})" class="bg-green-600 px-2 py-1 text-xs">V</button>
+        <button onclick="reprovar(${p.id})" class="bg-red-600 px-2 py-1 text-xs">X</button>
+      </div>
+    </div>`;
+  });
 
-  const time1 = lista.slice(0,metade).map(p=>p.nome);
-  const time2 = lista.slice(metade).map(p=>p.nome);
-
-  equipesContainer.innerHTML = `
-  <div class="equipe bg-red-500">Equipe 1: ${time1.join(", ")}</div>
-  <div class="equipe bg-blue-500">Equipe 2: ${time2.join(", ")}</div>`;
-};
-
+  listaAprovados.innerHTML="";
+  listaAprovadosData.forEach(p=>{
+    listaAprovados.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
+      <span>${p.nome} - ${p.fone}</span>
+      <button onclick="removerAprovado('${p.email}')" class="bg-red-600 px-2 py-1 text-xs">Remover</button>
+    </div>`;
+  });
+}
 </script>
-
 </body>
 </html>
