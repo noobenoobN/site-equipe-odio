@@ -3,257 +3,228 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Equipe ODIO</title>
+<title>Equipe [ODIO] - Oficial</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
-body{background:#0b0b0b;color:#fff;font-family:Arial;}
-.admin-only{display:none;}
-.admin-active .admin-only{display:inline-block;}
-.admin-active .admin-table{display:table-cell;}
-.admin-active #btnLogout{display:inline-block;}
-#btnLogout{display:none;}
-button{cursor:pointer;padding:6px 10px;border-radius:4px;background:#222;}
-table{margin-top:20px;}
+body { font-family: 'Oswald', sans-serif; background:#050505; color:#eee; }
+
+.admin-only { display:none; }
+.admin-active .admin-only { display:revert; }
+
+#btnLogout { display:none; }
+.admin-active #btnLogout { display:inline-block; }
+
+.equipe { padding:10px; margin:5px 0; border-radius:8px; color:#000; }
+
+button{ cursor:pointer; }
+#infoEquipes { margin-bottom:10px; font-weight:bold; color:#fff; }
 </style>
 </head>
-<body>
 
-<img id="bannerImg" src="" style="width:100%;height:250px;object-fit:cover;">
+<body class="pb-10">
 
-<h1 style="text-align:center;padding:15px;">Equipe ODIO</h1>
+<!-- BANNER -->
+<section class="relative w-full h-[300px] md:h-[400px] bg-zinc-900 border-b-4 border-red-600">
+<img id="bannerImg" src="https://images.alphacoders.com" class="w-full h-full object-cover opacity-60">
+</section>
 
-<div style="text-align:center;">
-<button onclick="abrirModal()">Alistar-se</button>
-<button onclick="abrirLogin()">Login</button>
-<button onclick="loginAdmin()">Admin</button>
-<button id="btnLogout" onclick="logoutAdmin()">Sair</button>
-<button class="admin-only" onclick="alterarBanner()">Alterar Banner</button>
+<!-- NAV -->
+<nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
+
+<div class="flex gap-4">
+<button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
+Alistar-se
+</button>
+
+<button onclick="abrirLogin()" class="bg-blue-600 px-6 py-2 rounded text-xs font-bold uppercase">
+Login
+</button>
 </div>
 
-<table border="1" width="100%" cellpadding="8">
-<thead>
+<div class="flex gap-3">
+<button onclick="loginAdmin()">Painel Admin</button>
+<button id="btnLogout" onclick="logoutAdmin()" class="text-red-600 text-xs uppercase font-bold">
+Sair
+</button>
+</div>
+
+</nav>
+
+<main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
+
+<!-- ADMIN PANEL -->
+<section class="admin-only space-y-6">
+<div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
+
+<h3 class="text-yellow-500 font-bold uppercase mb-3">Alterar Banner</h3>
+
+<input type="file" id="bannerLocal" accept="image/*" class="mb-2 text-xs">
+<button onclick="uploadLocalBanner()" class="bg-green-600 px-3 py-1 text-xs rounded">Imagem Local</button>
+
+<div class="mt-3">
+<input id="bannerLink" placeholder="Link da imagem online"
+class="w-full bg-black border border-zinc-700 p-2 text-white mb-2">
+<button onclick="usarLinkBanner()" class="bg-blue-600 px-3 py-1 text-xs rounded">
+Usar Link
+</button>
+</div>
+
+<hr class="my-4 border-zinc-700">
+
+<h3 class="text-yellow-500 font-bold mb-3 uppercase">Sorteador de Equipes</h3>
+<button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">
+Sortear Times
+</button>
+
+<div id="equipesContainer" class="mt-2"></div>
+
+</div>
+</section>
+
+<!-- RANK -->
+<div class="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
+<table class="w-full text-left">
+<thead class="bg-black text-zinc-500 text-xs uppercase">
 <tr>
-<th>#</th>
-<th>Nome</th>
-<th>Partidas</th>
-<th>Kills</th>
-<th class="admin-table">Ações</th>
+<th class="p-4">Rank</th>
+<th class="p-4">Nome no COD</th>
+<th class="p-4 text-center">Partidas</th>
+<th class="p-4 text-center text-red-500">Kills</th>
+<th class="p-4 text-right admin-only">Ações</th>
 </tr>
 </thead>
 <tbody id="rankBody"></tbody>
 </table>
-
-<div class="admin-only" style="margin-top:20px;text-align:center;">
-<h3>Pendentes</h3>
-<div id="pendentes"></div>
-
-<button onclick="sortearEquipes()">Sortear Times</button>
-<div id="equipesContainer"></div>
 </div>
+
+</main>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } 
-from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from
+"https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-import { 
-getFirestore, collection, addDoc, onSnapshot,
-updateDoc, doc, query, where, getDocs,
-deleteDoc, setDoc
-} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
-
-/* FIREBASE CONFIG */
 const firebaseConfig = {
-  apiKey: "AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
-  authDomain: "equipeodio-715f6.firebaseapp.com",
-  projectId: "equipeodio-715f6",
-  storageBucket: "equipeodio-715f6.firebasestorage.app",
-  messagingSenderId: "399735990964",
-  appId: "1:399735990964:web:6baa2428bc49c23d7845e1"
+  apiKey: "SUA_API_KEY_AQUI",
+  authDomain: "SUA_AUTH_DOMAIN",
+  projectId: "SUA_PROJECT_ID"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app);
+const docRef = doc(db,"site","dados");
 
 let aprovados=[];
-let pendentes=[];
+let bannerSalvo="https://images.alphacoders.com";
 
-/* ================= BANNER ================= */
-const siteRef = doc(db,"site","dados");
+/* INICIALIZAÇÃO */
+const snap = await getDoc(docRef);
+if(!snap.exists()){
+  await setDoc(docRef,{rank:[],banner:bannerSalvo});
+}
 
-onSnapshot(siteRef, async snap=>{
-  if(!snap.exists()){
-    await setDoc(siteRef,{banner:""});
-    return;
+/* LISTENER */
+onSnapshot(docRef, snap=>{
+  if(snap.exists()){
+    const d = snap.data();
+    aprovados = d.rank || [];
+    bannerSalvo = d.banner || bannerSalvo;
+    bannerImg.src = bannerSalvo;
+    renderRank();
   }
-  const d=snap.data();
-  if(d.banner) document.getElementById("bannerImg").src=d.banner;
 });
 
-/* ================= LER JOGADORES ================= */
-onSnapshot(collection(db,"alistamentos"), snap=>{
-  aprovados=[];
-  pendentes=[];
+/* SALVAR */
+async function salvar(){
+  await setDoc(docRef,{
+    rank:aprovados,
+    banner:bannerSalvo
+  },{merge:true});
+}
 
-  snap.forEach(docSnap=>{
-    const d=docSnap.data();
-
-    if(d.aprovado===true){
-      aprovados.push({
-        id:docSnap.id,
-        nome:d.nome,
-        email:d.email,
-        matches:d.matches||0,
-        kills:d.kills||0
-      });
-    }else{
-      pendentes.push({
-        id:docSnap.id,
-        nome:d.nome
-      });
-    }
-  });
-
-  renderRank();
-  renderPendentes();
-});
-
-/* ================= ALISTAR ================= */
-window.abrirModal = async ()=>{
-  const nome=prompt("Nome no COD:");
-  const email=prompt("Email:");
-  if(!nome||!email) return alert("Preencha tudo");
-
-  await addDoc(collection(db,"alistamentos"),{
-    nome,email,aprovado:false,matches:0,kills:0
-  });
-
-  alert("Pedido enviado!");
-};
-
-/* ================= LOGIN ================= */
-window.abrirLogin = async ()=>{
-  const email=prompt("Digite seu email:");
-  if(!email) return;
-
-  const q=query(collection(db,"alistamentos"),
-  where("email","==",email),
-  where("aprovado","==",true));
-
-  const snap=await getDocs(q);
-
-  if(snap.empty) return alert("Não aprovado.");
-
-  const senha=prompt("Senha:");
-
-  try{
-    await signInWithEmailAndPassword(auth,email,senha);
-    alert("Login OK");
-  }catch(e){
-    if(e.code==="auth/user-not-found"){
-      const nova=prompt("Primeiro acesso - crie senha:");
-      if(!nova||nova.length<6) return alert("Senha fraca");
-      await createUserWithEmailAndPassword(auth,email,nova);
-      alert("Conta criada. Faça login novamente.");
-    }else{
-      alert(e.message);
-    }
-  }
-};
-
-/* ================= ADMIN ================= */
-window.loginAdmin=()=>{
-  const senha=prompt("Senha admin:");
+/* ADMIN */
+window.loginAdmin = ()=>{
+  const senha = prompt("Senha Admin:");
   if(senha==="123"){
     document.body.classList.add("admin-active");
+  } else if(senha!==null){
+    alert("Senha incorreta!");
   }
 };
 
-window.logoutAdmin=()=>{
+window.logoutAdmin = ()=>{
   document.body.classList.remove("admin-active");
 };
 
-window.alterarBanner=async()=>{
-  const url=prompt("Nova URL do banner:");
-  if(!url) return;
-  await updateDoc(siteRef,{banner:url});
+/* BANNER */
+window.uploadLocalBanner = ()=>{
+  const file = bannerLocal.files[0];
+  if(!file) return alert("Selecione imagem");
+
+  const reader = new FileReader();
+  reader.onload = async e=>{
+    bannerSalvo = e.target.result;
+    await salvar();
+  };
+  reader.readAsDataURL(file);
 };
 
-/* ================= APROVAR ================= */
-window.aprovar=async(id)=>{
-  await updateDoc(doc(db,"alistamentos",id),{aprovado:true});
+window.usarLinkBanner = async ()=>{
+  const link = bannerLink.value.trim();
+  if(!link) return alert("Link inválido");
+  bannerSalvo = link;
+  await salvar();
 };
 
-/* ================= REMOVER ================= */
-window.remover=async(id)=>{
-  if(confirm("Remover jogador?")){
-    await deleteDoc(doc(db,"alistamentos",id));
+/* RANK */
+window.addScore = async nome=>{
+  const k=parseInt(prompt("Kills","0"))||0;
+  const idx=aprovados.findIndex(p=>p.nome===nome);
+  if(idx>-1){
+    aprovados[idx].matches+=1;
+    aprovados[idx].kills+=k;
+    await salvar();
   }
 };
 
-/* ================= RENDER ================= */
 function renderRank(){
-  const body=document.getElementById("rankBody");
-  body.innerHTML="";
-
-  aprovados.sort((a,b)=>b.kills-a.kills)
-  .forEach((p,i)=>{
-    body.innerHTML+=`
-    <tr>
-      <td>${i+1}</td>
-      <td>${p.nome}</td>
-      <td>${p.matches}</td>
-      <td>${p.kills}</td>
-      <td class="admin-table">
-        <button onclick="addScore('${p.id}')">+K</button>
-        <button onclick="remover('${p.id}')">X</button>
+  rankBody.innerHTML="";
+  aprovados.forEach((p,i)=>{
+    rankBody.innerHTML+=`
+    <tr class="border-b border-zinc-800">
+      <td class="p-4">#${i+1}</td>
+      <td class="p-4">${p.nome}</td>
+      <td class="p-4 text-center">${p.matches||0}</td>
+      <td class="p-4 text-center text-red-500">${p.kills||0}</td>
+      <td class="p-4 text-right admin-only">
+        <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">
+        +K
+        </button>
       </td>
     </tr>`;
   });
 }
 
-function renderPendentes(){
-  const div=document.getElementById("pendentes");
-  div.innerHTML="";
-  pendentes.forEach(p=>{
-    div.innerHTML+=`
-    <p>${p.nome}
-    <button onclick="aprovar('${p.id}')">Aprovar</button>
-    </p>`;
-  });
-}
+/* SORTEADOR */
+window.sortearEquipes = ()=>{
+  if(aprovados.length < 2) return alert("Precisa de pelo menos 2 jogadores");
 
-/* ================= ADD SCORE ================= */
-window.addScore=async(id)=>{
-  const k=parseInt(prompt("Kills?","0"))||0;
-  const j=aprovados.find(p=>p.id===id);
-  if(!j) return;
+  const lista = [...aprovados].sort(()=>Math.random()-0.5);
+  const metade = Math.ceil(lista.length/2);
 
-  await updateDoc(doc(db,"alistamentos",id),{
-    matches:j.matches+1,
-    kills:j.kills+k
-  });
-};
+  const time1 = lista.slice(0,metade).map(p=>p.nome);
+  const time2 = lista.slice(metade).map(p=>p.nome);
 
-/* ================= SORTEADOR ================= */
-window.sortearEquipes=()=>{
-  if(aprovados.length<2) return alert("Precisa de 2");
-
-  const lista=[...aprovados].sort(()=>Math.random()-0.5);
-  const metade=Math.ceil(lista.length/2);
-
-  const t1=lista.slice(0,metade).map(p=>p.nome);
-  const t2=lista.slice(metade).map(p=>p.nome);
-
-  document.getElementById("equipesContainer").innerHTML=
-  `<p>Equipe 1: ${t1.join(", ")}</p>
-   <p>Equipe 2: ${t2.join(", ")}</p>`;
+  equipesContainer.innerHTML = `
+  <div class="equipe bg-red-500">Equipe 1: ${time1.join(", ")}</div>
+  <div class="equipe bg-blue-500">Equipe 2: ${time2.join(", ")}</div>`;
 };
 
 </script>
+
 </body>
 </html>
