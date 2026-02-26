@@ -143,12 +143,12 @@ onSnapshot(docRef,s=>{
  espera=d.espera||[];
  aprovados=d.aprovados||[];
  banner=d.banner||"";
- bannerImg.src=banner;
+ if(banner) bannerImg.src=banner;
  renderTudo();
 });
 
 async function salvar(){
- await setDoc(docRef,{rank,espera,aprovados,banner});
+ await setDoc(docRef,{rank,espera,aprovados,banner},{merge:true});
 }
 
 /* ADMIN */
@@ -192,7 +192,7 @@ window.reprovar=async(id)=>{
 };
 
 window.removerAprovado=async(email)=>{
- const usuario = aprovados.find(p=>p.email===email);
+ const usuario=aprovados.find(p=>p.email===email);
  aprovados=aprovados.filter(p=>p.email!==email);
  rank=rank.filter(p=>p.nome!==usuario?.nome);
  await salvar();
@@ -220,13 +220,14 @@ window.sortearEquipes=()=>{
  <div class="equipe bg-blue-500">Equipe 2: ${t2.join(", ")}</div>`;
 };
 
-/* BANNER */
+/* BANNER FIX DEFINITIVO */
 window.uploadLocalBanner=()=>{
  const f=bannerLocal.files[0];
  if(!f) return alert("Selecione imagem");
  const r=new FileReader();
  r.onload=async e=>{
   banner=e.target.result;
+  bannerImg.src=banner;
   await salvar();
  };
  r.readAsDataURL(f);
@@ -236,6 +237,7 @@ window.usarLinkBanner=async()=>{
  const link=bannerLink.value.trim();
  if(!link) return alert("Link inválido");
  banner=link;
+ bannerImg.src=banner;
  await salvar();
 };
 
