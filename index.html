@@ -126,29 +126,43 @@ const firebaseConfig = {
   appId:"1:399735990964:web:6baa2428bc49c23d7845e1"
 };
 
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
-const docRef=doc(db,"site","dados");
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const docRef = doc(db,"site","dados");
 
-let rank=[], espera=[], aprovados=[], banner="";
+let rank=[], espera=[], aprovados=[];
+let bannerAtual="";
 
-const snap=await getDoc(docRef);
+/* GARANTE DOC SEM APAGAR BANNER */
+const snap = await getDoc(docRef);
 if(!snap.exists()){
- await setDoc(docRef,{rank:[],espera:[],aprovados:[],banner:""});
+ await setDoc(docRef,{rank:[],espera:[],aprovados:[]});
 }
 
-onSnapshot(docRef,s=>{
+/* SNAPSHOT */
+onSnapshot(docRef, s=>{
+ if(!s.exists()) return;
  const d=s.data();
+
  rank=d.rank||[];
  espera=d.espera||[];
  aprovados=d.aprovados||[];
- banner=d.banner||"";
- if(banner) bannerImg.src=banner;
+
+ if(d.banner && d.banner !== bannerAtual){
+   bannerAtual = d.banner;
+   bannerImg.src = bannerAtual;
+ }
+
  renderTudo();
 });
 
 async function salvar(){
- await setDoc(docRef,{rank,espera,aprovados,banner},{merge:true});
+ await setDoc(docRef,{
+   rank,
+   espera,
+   aprovados,
+   banner:bannerAtual
+ },{merge:true});
 }
 
 /* ADMIN */
@@ -220,14 +234,14 @@ window.sortearEquipes=()=>{
  <div class="equipe bg-blue-500">Equipe 2: ${t2.join(", ")}</div>`;
 };
 
-/* BANNER FIX DEFINITIVO */
+/* BANNER DEFINITIVO */
 window.uploadLocalBanner=()=>{
  const f=bannerLocal.files[0];
  if(!f) return alert("Selecione imagem");
  const r=new FileReader();
  r.onload=async e=>{
-  banner=e.target.result;
-  bannerImg.src=banner;
+  bannerAtual=e.target.result;
+  bannerImg.src=bannerAtual;
   await salvar();
  };
  r.readAsDataURL(f);
@@ -236,8 +250,8 @@ window.uploadLocalBanner=()=>{
 window.usarLinkBanner=async()=>{
  const link=bannerLink.value.trim();
  if(!link) return alert("Link inválido");
- banner=link;
- bannerImg.src=banner;
+ bannerAtual=link;
+ bannerImg.src=bannerAtual;
  await salvar();
 };
 
