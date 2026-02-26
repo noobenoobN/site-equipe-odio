@@ -28,20 +28,17 @@ button{ cursor:pointer; }
 
 <!-- NAV -->
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
-
 <div class="flex gap-4">
 <button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
 Alistar-se
 </button>
 </div>
-
 <div class="flex gap-3">
 <button onclick="loginAdmin()">Painel Admin</button>
 <button id="btnLogout" onclick="logoutAdmin()" class="text-red-600 text-xs uppercase font-bold">
 Sair
 </button>
 </div>
-
 </nav>
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
@@ -134,9 +131,7 @@ const db=getFirestore(app);
 const docRef=doc(db,"site","dados");
 
 let rank=[], espera=[], aprovados=[], banner="";
-let isAdmin=false;
 
-/* INICIALIZA */
 const snap=await getDoc(docRef);
 if(!snap.exists()){
  await setDoc(docRef,{rank:[],espera:[],aprovados:[],banner:""});
@@ -153,20 +148,16 @@ onSnapshot(docRef,s=>{
 });
 
 async function salvar(){
- await setDoc(docRef,{
-  rank,espera,aprovados,banner
- });
+ await setDoc(docRef,{rank,espera,aprovados,banner});
 }
 
 /* ADMIN */
 window.loginAdmin=()=>{
  if(prompt("Senha admin:")==="123"){
-  isAdmin=true;
   document.body.classList.add("admin-active");
  }
 };
 window.logoutAdmin=()=>{
- isAdmin=false;
  document.body.classList.remove("admin-active");
 };
 
@@ -180,7 +171,6 @@ window.solicitarEntrada=async()=>{
  const email=regEmail.value.trim();
  const fone=regFone.value.trim();
  if(!nome||!email||!fone) return alert("Preencha tudo");
-
  espera.push({nome,email,fone,id:Date.now()});
  await salvar();
  fecharModal();
@@ -202,8 +192,9 @@ window.reprovar=async(id)=>{
 };
 
 window.removerAprovado=async(email)=>{
+ const usuario = aprovados.find(p=>p.email===email);
  aprovados=aprovados.filter(p=>p.email!==email);
- rank=rank.filter(p=>p.nome!==email);
+ rank=rank.filter(p=>p.nome!==usuario?.nome);
  await salvar();
 };
 
@@ -232,7 +223,7 @@ window.sortearEquipes=()=>{
 /* BANNER */
 window.uploadLocalBanner=()=>{
  const f=bannerLocal.files[0];
- if(!f) return;
+ if(!f) return alert("Selecione imagem");
  const r=new FileReader();
  r.onload=async e=>{
   banner=e.target.result;
@@ -240,23 +231,29 @@ window.uploadLocalBanner=()=>{
  };
  r.readAsDataURL(f);
 };
+
 window.usarLinkBanner=async()=>{
- banner=bannerLink.value.trim();
+ const link=bannerLink.value.trim();
+ if(!link) return alert("Link inválido");
+ banner=link;
  await salvar();
 };
 
 /* RENDER */
 function renderTudo(){
+
  rankBody.innerHTML="";
  rank.forEach((p,i)=>{
   rankBody.innerHTML+=`
   <tr>
-   <td>${i+1}</td>
-   <td>${p.nome}</td>
-   <td>${p.matches||0}</td>
-   <td>${p.kills||0}</td>
-   <td class="admin-only">
-    <button onclick="addScore('${p.nome}')">+K</button>
+   <td class="p-2">${i+1}</td>
+   <td class="p-2">${p.nome}</td>
+   <td class="p-2 text-center">${p.matches||0}</td>
+   <td class="p-2 text-center text-red-500">${p.kills||0}</td>
+   <td class="admin-only p-2 text-right">
+    <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">
+    +K
+    </button>
    </td>
   </tr>`;
  });
@@ -264,17 +261,28 @@ function renderTudo(){
  listaEspera.innerHTML="";
  espera.forEach(p=>{
   listaEspera.innerHTML+=`
-  <div>${p.nome}
-  <button onclick="aprovar(${p.id})">✔</button>
-  <button onclick="reprovar(${p.id})">X</button>
+  <div class="bg-black p-2 rounded flex justify-between mb-2">
+    <span>${p.nome}</span>
+    <div>
+      <button onclick="aprovar(${p.id})" class="bg-green-600 px-2 py-1 text-xs">✔</button>
+      <button onclick="reprovar(${p.id})" class="bg-red-600 px-2 py-1 text-xs">X</button>
+    </div>
   </div>`;
  });
 
  listaAprovados.innerHTML="";
  aprovados.forEach(p=>{
   listaAprovados.innerHTML+=`
-  <div>${p.nome}
-  <button onclick="removerAprovado('${p.email}')">Remover</button>
+  <div class="bg-black p-2 rounded flex justify-between items-center mb-2">
+    <div>
+      <div><strong>Nome:</strong> ${p.nome}</div>
+      <div><strong>Email:</strong> ${p.email}</div>
+      <div><strong>Telefone:</strong> ${p.fone}</div>
+    </div>
+    <button onclick="removerAprovado('${p.email}')" 
+      class="bg-red-600 px-2 py-1 text-xs rounded">
+      Remover
+    </button>
   </div>`;
  });
 
