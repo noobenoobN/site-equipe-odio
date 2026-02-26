@@ -1,138 +1,222 @@
-<!-- CÓDIGO RESTAURADO BASE 25/02 FUNCIONANDO -->
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Equipe [ODIO]</title>
+<title>Equipe [ODIO] - Oficial</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
 <style>
-body { font-family:'Oswald',sans-serif;background:#050505;color:#eee; }
-.admin-only { display:none; }
-.equipe { padding:10px;margin:5px 0;border-radius:8px;color:#000; }
+body { font-family: 'Oswald', sans-serif; background: #050505; color: #eee; }
+.admin-only { display: none; }
+.equipe { padding: 10px; margin:5px 0; border-radius:8px; color:#000; }
 button{ cursor:pointer; }
+#infoEquipes { margin-bottom: 10px; font-weight: bold; color: #fff; }
 </style>
 </head>
-<body>
+<body class="pb-10">
 
-<img id="bannerImg" src="" style="width:100%;height:300px;object-fit:cover;">
+<section class="relative w-full h-[300px] md:h-[400px] bg-zinc-900 border-b-4 border-red-600">
+<img id="bannerImg" src="https://images.alphacoders.com" class="w-full h-full object-cover opacity-60">
+</section>
 
-<button onclick="abrirModal()">Alistar-se</button>
-<button onclick="loginAdmin()">Admin</button>
+<nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
+<button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">Alistar-se</button>
+<button onclick="loginAdmin()">Painel Admin</button>
+</nav>
 
-<table border="1" width="100%">
-<thead>
+<main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
+
+<section id="adminPanel" class="admin-only space-y-6">
+<div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
+<h3 class="text-yellow-500 font-bold mb-3 uppercase">Recrutas (Aprovar / Reprovar)</h3>
+<div id="listaEspera" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
+
+<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Lista de Aprovados <span id="contagemAprovados" class="text-white text-xs"></span></h3>
+<div id="listaAprovados" class="space-y-2 max-h-[150px] overflow-y-auto"></div>
+
+<h3 class="text-yellow-500 font-bold mb-3 uppercase mt-4">Sorteador de Equipes</h3>
+<div id="infoEquipes"></div> <!-- Aqui aparecerá a quantidade de equipes e jogadores -->
+<button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">Sortear Times</button>
+<div id="equipesContainer" class="mt-2"></div>
+</div>
+</section>
+
+<div class="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
+<table class="w-full text-left">
+<thead class="bg-black text-zinc-500 text-xs uppercase">
 <tr>
-<th>#</th>
-<th>Nome</th>
-<th>Partidas</th>
-<th>Kills</th>
-<th class="admin-only">Ações</th>
+<th class="p-4">Rank</th>
+<th class="p-4">Nome no COD</th>
+<th class="p-4 text-center">Partidas</th>
+<th class="p-4 text-center text-red-500">Kills</th>
+<th class="p-4 text-right admin-only">Ações</th>
 </tr>
 </thead>
 <tbody id="rankBody"></tbody>
 </table>
+</div>
 
-<div id="listaEspera" class="admin-only"></div>
+<div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+<div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
+<h2 class="text-2xl font-bold mb-6 text-center uppercase">Alistamento</h2>
+<input id="regNome" placeholder="Nome no COD" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<input id="regEmail" placeholder="Email" type="email" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<input id="regFone" placeholder="Telefone" class="w-full bg-black border border-zinc-700 p-3 rounded text-white mb-2">
+<button onclick="solicitarEntrada()" class="w-full bg-red-600 py-3 font-bold uppercase">Enviar Cadastro</button>
+<button onclick="fecharModal()" class="w-full text-zinc-600 text-xs uppercase mt-2">Fechar</button>
+</div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot } 
-from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey:"AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
-  authDomain:"equipeodio-715f6.firebaseapp.com",
-  projectId:"equipeodio-715f6",
-  storageBucket:"equipeodio-715f6.firebasestorage.app",
-  messagingSenderId:"399735990964",
-  appId:"1:399735990964:web:6baa2428bc49c23d7845e1"
+  apiKey: "AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
+  authDomain: "equipeodio-715f6.firebaseapp.com",
+  projectId: "equipeodio-715f6",
+  storageBucket: "equipeodio-715f6.firebasestorage.app",
+  messagingSenderId: "399735990964",
+  appId: "1:399735990964:web:6baa2428bc49c23d7845e1"
 };
 
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
-const docRef=doc(db,"site","dados");
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const docRef = doc(db,"site","dados");
 
-let aprovados=[], espera=[], bannerSalvo="", isAdmin=false;
+let aprovados=[], espera=[], listaAprovadosData=[], bannerSalvo="https://images.alphacoders.com", isAdmin=false;
 
-async function iniciar(){
-  const snap=await getDoc(docRef);
-  if(!snap.exists()){
-    await setDoc(docRef,{rank:[],espera:[],banner:""});
-  }
+async function inicializar(){ 
+  const snap = await getDoc(docRef);
+  if(!snap.exists()) await setDoc(docRef,{rank:[],espera:[],aprovados:[],banner:bannerSalvo});
 }
-await iniciar();
+await inicializar();
 
-onSnapshot(docRef,snap=>{
-  if(!snap.exists()) return;
-  const d=snap.data();
-  aprovados=d.rank||[];
-  espera=d.espera||[];
-  bannerSalvo=d.banner||"";
-  if(bannerSalvo) bannerImg.src=bannerSalvo;
-  render();
+onSnapshot(docRef, snap=>{
+  if(snap.exists()){
+    const d = snap.data();
+    aprovados=d.rank||[];
+    espera=d.espera||[];
+    listaAprovadosData=d.aprovados||[];
+    bannerSalvo=d.banner||bannerSalvo;
+    document.getElementById("bannerImg").src=bannerSalvo;
+    renderRank(); renderAdmin();
+  }
 });
 
-async function salvar(){
-  await setDoc(docRef,{
-    rank:aprovados,
-    espera:espera,
-    banner:bannerSalvo
-  });
-}
+async function salvar(){ await setDoc(docRef,{rank:aprovados,espera:espera,aprovados:listaAprovadosData,banner:bannerSalvo}); }
 
-window.abrirModal=()=>{
-  const nome=prompt("Nome:");
-  if(!nome) return;
-  espera.push({nome,id:Date.now()});
-  salvar();
+window.abrirModal = ()=> modalCadastro.classList.remove("hidden");
+window.fecharModal = ()=> modalCadastro.classList.add("hidden");
+
+window.solicitarEntrada = async ()=>{
+  const nome=regNome.value.trim();
+  const email=regEmail.value.trim();
+  const fone=regFone.value.trim();
+  if(!nome||!email||!fone){ alert("Preencha todos os campos!"); return; }
+
+  const duplicado=[...espera,...listaAprovadosData].some(p=>p.nome===nome || p.email===email || p.fone===fone);
+  if(duplicado){ alert("Já cadastrado!"); return; }
+
+  const senha=prompt("Primeiro acesso! Crie uma senha alfanumérica (mínimo 6 dígitos):");
+  if(!senha||senha.length<6||!/\d/.test(senha)||!/[a-zA-Z]/.test(senha)){ alert("Senha inválida"); return; }
+
+  espera.push({nome,email,fone,senha,id:Date.now()});
+  await salvar();
+  alert("Pedido enviado com sucesso!");
+  regNome.value=""; regEmail.value=""; regFone.value="";
+  fecharModal();
 };
 
-window.loginAdmin=()=>{
-  if(prompt("Senha admin:")==="123"){
-    isAdmin=true;
-    document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block");
-  }
+window.loginAdmin = ()=>{
+  const senha = prompt("Senha Admin:");
+  if(senha==="123"){ isAdmin=true; document.querySelectorAll(".admin-only").forEach(e=>e.style.display="block"); }
+  else if(senha!==null) alert("Senha incorreta!");
 };
 
-window.aprovar=(id)=>{
+window.aprovar = async (id)=>{
   const idx=espera.findIndex(p=>p.id===id);
   if(idx===-1) return;
   const j=espera.splice(idx,1)[0];
-  aprovados.push({nome:j.nome,matches:0,kills:0});
-  salvar();
+  const novo={nome:j.nome,matches:0,kills:0};
+  aprovados.push(novo);
+  listaAprovadosData.push({nome:j.nome,fone:j.fone,email:j.email,senha:j.senha});
+  await salvar(); renderRank(); renderAdmin();
 };
 
-window.addScore=(nome)=>{
-  const k=parseInt(prompt("Kills","0"))||0;
-  const j=aprovados.find(p=>p.nome===nome);
-  if(!j) return;
-  j.matches++;
-  j.kills+=k;
-  salvar();
+window.reprovar = async (id)=>{ espera=espera.filter(p=>p.id!==id); await salvar(); renderAdmin(); };
+window.removerAprovado = async (email)=>{ 
+  listaAprovadosData=listaAprovadosData.filter(p=>p.email!==email); 
+  aprovados=aprovados.filter(p=>p.nome!==listaAprovadosData.find(a=>a.email===email)?.nome); 
+  await salvar(); renderRank(); renderAdmin(); 
 };
 
-function render(){
+window.addScore = async (nome)=>{ const k=parseInt(prompt("Kills","0"))||0; const idx=aprovados.findIndex(p=>p.nome===nome); if(idx>-1){ aprovados[idx].matches+=1; aprovados[idx].kills+=k; await salvar(); renderRank(); } };
+window.removerDoRank = async (nome)=>{ aprovados=aprovados.filter(p=>p.nome!==nome); listaAprovadosData=listaAprovadosData.filter(p=>p.nome!==nome); await salvar(); renderRank(); renderAdmin(); };
+
+window.sortearEquipes = ()=>{
+  const totalJogadores = aprovados.length;
+  if(totalJogadores < 2){ alert("Precisa de pelo menos 2 jogadores"); return; }
+
+  let numEquipes = totalJogadores < 8 ? 2 : parseInt(prompt(`Quantas equipes criar?`));
+  if(isNaN(numEquipes) || numEquipes<1) numEquipes=1;
+  if(numEquipes>totalJogadores) numEquipes = totalJogadores;
+
+  const lista = [...aprovados].sort(() => Math.random()-0.5);
+  const equipes = Array.from({length:numEquipes}, ()=>[]);
+  lista.forEach((player,index)=>equipes[index % numEquipes].push(player.nome));
+
+  // MOSTRA INFO DIRETO NA PÁGINA
+  const infoDiv = document.getElementById("infoEquipes");
+  infoDiv.textContent = `Total de jogadores: ${totalJogadores} | Número de equipes: ${numEquipes}`;
+
+  const cores = ["bg-red-500","bg-blue-500","bg-green-500","bg-yellow-400","bg-purple-500","bg-orange-400"];
+  const container = document.getElementById("equipesContainer");
+  container.innerHTML="";
+  equipes.forEach((eq,i)=>{
+    const div = document.createElement("div");
+    div.className = `equipe ${cores[i % cores.length]} p-2 mb-2`;
+    div.textContent = `Equipe ${i+1}: ${eq.join(", ")}`;
+    container.appendChild(div);
+  });
+};
+
+function renderRank(){
   rankBody.innerHTML="";
   aprovados.forEach((p,i)=>{
-    rankBody.innerHTML+=`
-    <tr>
-      <td>${i+1}</td>
-      <td>${p.nome}</td>
-      <td>${p.matches}</td>
-      <td>${p.kills}</td>
-      <td class="admin-only">
-        <button onclick="addScore('${p.nome}')">+K</button>
+    rankBody.innerHTML+=`<tr class="border-b border-zinc-800">
+      <td class="p-4">#${i+1}</td>
+      <td class="p-4">${p.nome}</td>
+      <td class="p-4 text-center">${p.matches}</td>
+      <td class="p-4 text-center text-red-500">${p.kills}</td>
+      <td class="p-4 text-right admin-only" style="display:${isAdmin?'block':'none'}">
+        <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">+K</button>
+        <button onclick="removerDoRank('${p.nome}')" class="text-red-500 ml-2">X</button>
       </td>
     </tr>`;
   });
+}
+
+function renderAdmin(){
+  contagemAprovados.textContent=`(${listaAprovadosData.length} jogador(es))`;
 
   listaEspera.innerHTML="";
   espera.forEach(p=>{
-    listaEspera.innerHTML+=`
-    <div>${p.nome}
-    <button onclick="aprovar(${p.id})">Aprovar</button>
+    listaEspera.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
+      <div>${p.nome} - ${p.fone}</div>
+      <div>
+        <button onclick="aprovar(${p.id})" class="bg-green-600 px-2 py-1 text-xs">V</button>
+        <button onclick="reprovar(${p.id})" class="bg-red-600 px-2 py-1 text-xs">X</button>
+      </div>
+    </div>`;
+  });
+
+  listaAprovados.innerHTML="";
+  listaAprovadosData.forEach(p=>{
+    listaAprovados.innerHTML+=`<div class="bg-black p-2 rounded flex justify-between">
+      <span>${p.nome} - ${p.fone}</span>
+      <button onclick="removerAprovado('${p.email}')" class="bg-red-600 px-2 py-1 text-xs">Remover</button>
     </div>`;
   });
 }
