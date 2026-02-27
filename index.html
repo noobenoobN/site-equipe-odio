@@ -21,12 +21,10 @@ button{ cursor:pointer; }
 
 <body class="pb-10">
 
-<!-- BANNER -->
 <section class="relative w-full h-[300px] md:h-[400px] bg-zinc-900 border-b-4 border-red-600">
 <img id="bannerImg" class="w-full h-full object-cover opacity-60">
 </section>
 
-<!-- NAV -->
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
 <div class="flex gap-4">
 <button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
@@ -43,7 +41,6 @@ Sair
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
 
-<!-- ADMIN -->
 <section class="admin-only space-y-6">
 <div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
 
@@ -81,7 +78,6 @@ Sortear Times
 </div>
 </section>
 
-<!-- RANK -->
 <div class="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
 <table class="w-full text-left">
 <thead class="bg-black text-zinc-500 text-xs uppercase">
@@ -99,7 +95,6 @@ Sortear Times
 
 </main>
 
-<!-- MODAL -->
 <div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
 <div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
 <h2 class="text-xl font-bold mb-4 text-center uppercase">Alistamento</h2>
@@ -133,7 +128,7 @@ const docRef = doc(db,"site","dados");
 let rank=[], espera=[], aprovados=[];
 let bannerAtual="";
 
-/* GARANTE DOC SEM APAGAR BANNER */
+/* GARANTE DOC */
 const snap = await getDoc(docRef);
 if(!snap.exists()){
  await setDoc(docRef,{rank:[],espera:[],aprovados:[]});
@@ -222,19 +217,28 @@ window.addScore=async(nome)=>{
  }
 };
 
-/* SORTEADOR */
-window.sortearEquipes=()=>{
- if(rank.length<2) return alert("Precisa 2+ jogadores");
- const lista=[...rank].sort(()=>Math.random()-0.5);
- const metade=Math.ceil(lista.length/2);
- const t1=lista.slice(0,metade).map(p=>p.nome);
- const t2=lista.slice(metade).map(p=>p.nome);
- equipesContainer.innerHTML=`
- <div class="equipe bg-red-500">Equipe 1: ${t1.join(", ")}</div>
- <div class="equipe bg-blue-500">Equipe 2: ${t2.join(", ")}</div>`;
+/* SORTEADOR - EQUIPES DE ATÉ 4 */
+window.sortearEquipes = () => {
+  if (rank.length < 2) return alert("Precisa 2+ jogadores");
+
+  const lista = [...rank].sort(() => Math.random() - 0.5);
+  const equipes = [];
+
+  for (let i = 0; i < lista.length; i += 4) {
+    equipes.push(lista.slice(i, i + 4).map(p => p.nome));
+  }
+
+  equipesContainer.innerHTML = "";
+  equipes.forEach((eq, index) => {
+    equipesContainer.innerHTML += `
+      <div class="equipe ${index % 2 === 0 ? 'bg-red-500' : 'bg-blue-500'}">
+        Equipe ${index + 1} (até 4): ${eq.join(", ")}
+      </div>
+    `;
+  });
 };
 
-/* BANNER DEFINITIVO */
+/* BANNER */
 window.uploadLocalBanner=()=>{
  const f=bannerLocal.files[0];
  if(!f) return alert("Selecione imagem");
@@ -286,23 +290,40 @@ function renderTudo(){
   </div>`;
  });
 
+ /* LISTA DE APROVADOS */
  listaAprovados.innerHTML="";
  aprovados.forEach(p=>{
+  const id = `dados_${p.email.replace(/[^a-zA-Z0-9]/g,'')}`;
+
   listaAprovados.innerHTML+=`
-  <div class="bg-black p-2 rounded flex justify-between items-center mb-2">
-    <div>
-      <div><strong>Nome:</strong> ${p.nome}</div>
-      <div><strong>Email:</strong> ${p.email}</div>
-      <div><strong>Telefone:</strong> ${p.fone}</div>
+  <div class="bg-black p-2 rounded mb-2">
+    <div><strong>Nome:</strong> ${p.nome}</div>
+
+    <div id="${id}" class="text-zinc-500 text-xs mt-1">
+      Dados ocultos
     </div>
-    <button onclick="removerAprovado('${p.email}')" 
-      class="bg-red-600 px-2 py-1 text-xs rounded">
+
+    <button onclick="
+      const el = document.getElementById('${id}');
+      if(el.textContent.includes('ocultos')){
+        el.innerHTML = '<strong>Email:</strong> ${p.email}<br><strong>Telefone:</strong> ${p.fone}';
+        this.textContent = 'Ocultar';
+      } else {
+        el.textContent = 'Dados ocultos';
+        this.textContent = 'Ver dados';
+      }
+    " class="bg-blue-600 px-2 py-1 text-xs rounded mt-2">
+      Ver dados
+    </button>
+
+    <button onclick="removerAprovado('${p.email}')"
+      class="bg-red-600 px-2 py-1 text-xs rounded mt-2">
       Remover
     </button>
   </div>`;
  });
 
- contagemAprovados.textContent=aprovados.length;
+ contagemAprovados.textContent = aprovados.length;
 }
 
 </script>
