@@ -1,1 +1,333 @@
 
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Equipe [ODIO] - Oficial</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+body { font-family:'Oswald',sans-serif;background:#050505;color:#eee; }
+.admin-only { display:none; }
+.admin-active .admin-only { display:revert; }
+#btnLogout { display:none; }
+.admin-active #btnLogout { display:inline-block; }
+.equipe { padding:10px;margin:5px 0;border-radius:8px;color:#000; }
+button{ cursor:pointer; }
+</style>
+</head>
+
+<body class="pb-10">
+
+<section class="relative w-full h-[300px] md:h-[400px] bg-zinc-900 border-b-4 border-red-600">
+<img id="bannerImg" class="w-full h-full object-cover opacity-60">
+</section>
+
+<nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
+<div class="flex gap-4">
+<button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
+Alistar-se
+</button>
+</div>
+<div class="flex gap-3">
+<button onclick="loginAdmin()">Painel Admin</button>
+<button id="btnLogout" onclick="logoutAdmin()" class="text-red-600 text-xs uppercase font-bold">
+Sair
+</button>
+</div>
+</nav>
+
+<main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
+
+<section class="admin-only space-y-6">
+<div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
+
+<h3 class="text-yellow-500 font-bold uppercase mb-3">Alterar Banner</h3>
+
+<input type="file" id="bannerLocal" accept="image/*" class="mb-2 text-xs">
+<button onclick="uploadLocalBanner()" class="bg-green-600 px-3 py-1 text-xs rounded">Imagem Local</button>
+
+<div class="mt-3">
+<input id="bannerLink" placeholder="Link da imagem online"
+class="w-full bg-black border border-zinc-700 p-2 text-white mb-2">
+<button onclick="usarLinkBanner()" class="bg-blue-600 px-3 py-1 text-xs rounded">
+Usar Link
+</button>
+</div>
+
+<hr class="my-4 border-zinc-700">
+
+<h3 class="text-yellow-500 font-bold uppercase mb-3">Recrutas</h3>
+<div id="listaEspera"></div>
+
+<h3 class="text-yellow-500 font-bold uppercase mt-4">
+Lista de Aprovados (<span id="contagemAprovados"></span>)
+</h3>
+<div id="listaAprovados"></div>
+
+<hr class="my-4 border-zinc-700">
+
+<h3 class="text-yellow-500 font-bold uppercase mb-3">Sorteador</h3>
+<button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs">
+Sortear Times
+</button>
+<div id="equipesContainer" class="mt-2"></div>
+
+</div>
+</section>
+
+<div class="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
+<table class="w-full text-left">
+<thead class="bg-black text-zinc-500 text-xs uppercase">
+<tr>
+<th class="p-4">Rank</th>
+<th class="p-4">Nome</th>
+<th class="p-4 text-center">Partidas</th>
+<th class="p-4 text-center text-red-500">Kills</th>
+<th class="p-4 text-right admin-only">Ações</th>
+</tr>
+</thead>
+<tbody id="rankBody"></tbody>
+</table>
+</div>
+
+</main>
+
+<div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+<div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
+<h2 class="text-xl font-bold mb-4 text-center uppercase">Alistamento</h2>
+<input id="regNome" placeholder="Nome" class="w-full bg-black border p-2 mb-2">
+<input id="regEmail" placeholder="Email" class="w-full bg-black border p-2 mb-2">
+<input id="regFone" placeholder="Telefone" class="w-full bg-black border p-2 mb-2">
+<button onclick="solicitarEntrada()" class="w-full bg-red-600 py-2">Enviar</button>
+<button onclick="fecharModal()" class="w-full mt-2 text-zinc-500 text-xs">Fechar</button>
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:"AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
+  authDomain:"equipeodio-715f6.firebaseapp.com",
+  projectId:"equipeodio-715f6",
+  storageBucket:"equipeodio-715f6.firebasestorage.app",
+  messagingSenderId:"399735990964",
+  appId:"1:399735990964:web:6baa2428bc49c23d7845e1"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const docRef = doc(db,"site","dados");
+
+let rank=[], espera=[], aprovados=[];
+let bannerAtual="";
+
+/* GARANTE DOC */
+const snap = await getDoc(docRef);
+if(!snap.exists()){
+ await setDoc(docRef,{rank:[],espera:[],aprovados:[]});
+}
+
+/* SNAPSHOT */
+onSnapshot(docRef, s=>{
+ if(!s.exists()) return;
+ const d=s.data();
+
+ rank=d.rank||[];
+ espera=d.espera||[];
+ aprovados=d.aprovados||[];
+
+ if(d.banner && d.banner !== bannerAtual){
+   bannerAtual = d.banner;
+   bannerImg.src = bannerAtual;
+ }
+
+ renderTudo();
+});
+
+async function salvar(){
+ await setDoc(docRef,{
+   rank,
+   espera,
+   aprovados,
+   banner:bannerAtual
+ },{merge:true});
+}
+
+/* ADMIN */
+window.loginAdmin=()=>{
+ if(prompt("Senha admin:")==="malvadeza123"){
+  document.body.classList.add("admin-active");
+ }
+};
+window.logoutAdmin=()=>{
+ document.body.classList.remove("admin-active");
+};
+
+/* MODAL */
+window.abrirModal=()=>modalCadastro.classList.remove("hidden");
+window.fecharModal=()=>modalCadastro.classList.add("hidden");
+
+/* CADASTRO */
+window.solicitarEntrada=async()=>{
+ const nome=regNome.value.trim();
+ const email=regEmail.value.trim();
+ const fone=regFone.value.trim();
+ if(!nome||!email||!fone) return alert("Preencha tudo");
+ espera.push({nome,email,fone,id:Date.now()});
+ await salvar();
+ fecharModal();
+};
+
+/* APROVAR */
+window.aprovar=async(id)=>{
+ const i=espera.findIndex(p=>p.id===id);
+ if(i===-1) return;
+ const j=espera.splice(i,1)[0];
+ rank.push({nome:j.nome,matches:0,kills:0});
+ aprovados.push(j);
+ await salvar();
+};
+
+window.reprovar=async(id)=>{
+ espera=espera.filter(p=>p.id!==id);
+ await salvar();
+};
+
+window.removerAprovado=async(email)=>{
+ const usuario=aprovados.find(p=>p.email===email);
+ aprovados=aprovados.filter(p=>p.email!==email);
+ rank=rank.filter(p=>p.nome!==usuario?.nome);
+ await salvar();
+};
+
+window.addScore=async(nome)=>{
+ const i=rank.findIndex(p=>p.nome===nome);
+ const k=parseInt(prompt("Kills","0"))||0;
+ if(i>-1){
+  rank[i].matches++;
+  rank[i].kills+=k;
+  await salvar();
+ }
+};
+
+/* SORTEADOR - EQUIPES DE ATÉ 4 */
+window.sortearEquipes = () => {
+  if (rank.length < 2) return alert("Precisa 2+ jogadores");
+
+  const lista = [...rank].sort(() => Math.random() - 0.5);
+  const equipes = [];
+
+  for (let i = 0; i < lista.length; i += 4) {
+    equipes.push(lista.slice(i, i + 4).map(p => p.nome));
+  }
+
+  equipesContainer.innerHTML = "";
+  equipes.forEach((eq, index) => {
+    equipesContainer.innerHTML += `
+      <div class="equipe ${index % 2 === 0 ? 'bg-red-500' : 'bg-blue-500'}">
+        Equipe ${index + 1} (até 4): ${eq.join(", ")}
+      </div>
+    `;
+  });
+};
+
+/* BANNER */
+window.uploadLocalBanner=()=>{
+ const f=bannerLocal.files[0];
+ if(!f) return alert("Selecione imagem");
+ const r=new FileReader();
+ r.onload=async e=>{
+  bannerAtual=e.target.result;
+  bannerImg.src=bannerAtual;
+  await salvar();
+ };
+ r.readAsDataURL(f);
+};
+
+window.usarLinkBanner=async()=>{
+ const link=bannerLink.value.trim();
+ if(!link) return alert("Link inválido");
+ bannerAtual=link;
+ bannerImg.src=bannerAtual;
+ await salvar();
+};
+
+/* RENDER */
+function renderTudo(){
+
+ rankBody.innerHTML="";
+ rank.forEach((p,i)=>{
+  rankBody.innerHTML+=`
+  <tr>
+   <td class="p-2">${i+1}</td>
+   <td class="p-2">${p.nome}</td>
+   <td class="p-2 text-center">${p.matches||0}</td>
+   <td class="p-2 text-center text-red-500">${p.kills||0}</td>
+   <td class="admin-only p-2 text-right">
+    <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-xs rounded">
+    +K
+    </button>
+   </td>
+  </tr>`;
+ });
+
+ listaEspera.innerHTML="";
+ espera.forEach(p=>{
+  listaEspera.innerHTML+=`
+  <div class="bg-black p-2 rounded flex justify-between mb-2">
+    <span>${p.nome}</span>
+    <div>
+      <button onclick="aprovar(${p.id})" class="bg-green-600 px-2 py-1 text-xs">✔</button>
+      <button onclick="reprovar(${p.id})" class="bg-red-600 px-2 py-1 text-xs">X</button>
+    </div>
+  </div>`;
+ });
+
+ /* LISTA DE APROVADOS */
+ listaAprovados.innerHTML="";
+ aprovados.forEach(p=>{
+  const id = `dados_${p.email.replace(/[^a-zA-Z0-9]/g,'')}`;
+
+  listaAprovados.innerHTML+=`
+  <div class="bg-black p-2 rounded mb-2">
+    <div><strong>Nome:</strong> ${p.nome}</div>
+
+    <div id="${id}" class="text-zinc-500 text-xs mt-1">
+      Dados ocultos
+    </div>
+
+    <button onclick="
+      const el = document.getElementById('${id}');
+      if(el.textContent.includes('ocultos')){
+        el.innerHTML = '<strong>Email:</strong> ${p.email}<br><strong>Telefone:</strong> ${p.fone}';
+        this.textContent = 'Ocultar';
+      } else {
+        el.textContent = 'Dados ocultos';
+        this.textContent = 'Ver dados';
+      }
+    " class="bg-blue-600 px-2 py-1 text-xs rounded mt-2">
+      Ver dados
+    </button>
+
+    <button onclick="removerAprovado('${p.email}')"
+      class="bg-red-600 px-2 py-1 text-xs rounded mt-2">
+      Remover
+    </button>
+  </div>`;
+ });
+
+ contagemAprovados.textContent = aprovados.length;
+}
+
+</script>
+
+</body>
+</html>
