@@ -7,6 +7,7 @@
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
 body { font-family:'Oswald',sans-serif;background:#050505;color:#eee; }
@@ -16,6 +17,11 @@ body { font-family:'Oswald',sans-serif;background:#050505;color:#eee; }
 .admin-active #btnLogout { display:inline-block; }
 .equipe { padding:10px;margin:5px 0;border-radius:8px;color:#000; }
 button{ cursor:pointer; }
+
+/* NOVAS CLASSES PARA O SISTEMA DE MEMBRO LOGADO */
+.membro-only { display:none; }
+.membro-active .membro-only { display:revert; }
+.membro-active .membro-hide { display:none; }
 </style>
 </head>
 
@@ -27,11 +33,19 @@ button{ cursor:pointer; }
 
 <nav class="max-w-6xl mx-auto flex justify-between items-center p-6 bg-zinc-900 border-b border-zinc-800">
 <div class="flex gap-4">
-<button onclick="abrirModal()" class="bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
+<button onclick="abrirModal()" class="membro-hide bg-red-600 px-6 py-2 rounded text-xs font-bold uppercase">
 Alistar-se
+</button>
+<button onclick="abrirModalLogin()" class="membro-hide bg-blue-600 px-6 py-2 rounded text-xs font-bold uppercase">
+Login Membro
 </button>
 </div>
 <div class="flex gap-3">
+<span id="nomeMembroLogado" class="membro-only text-blue-400 font-bold text-sm self-center mr-2"></span>
+<button id="btnLogoutMembro" onclick="logoutMembro()" class="membro-only text-blue-600 text-xs uppercase font-bold mr-4">
+Sair (Membro)
+</button>
+
 <button onclick="loginAdmin()">Painel Admin</button>
 <button id="btnLogout" onclick="logoutAdmin()" class="text-red-600 text-xs uppercase font-bold">
 Sair
@@ -41,8 +55,22 @@ Sair
 
 <main class="max-w-6xl mx-auto p-4 mt-8 space-y-10">
 
+<section class="membro-only space-y-6">
+<div class="bg-zinc-900 p-6 rounded border-2 border-blue-600">
+<h3 class="text-blue-500 font-bold uppercase mb-3">Painel do Soldado</h3>
+<button onclick="abrirModalPrint()" class="bg-blue-600 px-4 py-2 rounded text-xs font-bold uppercase">
++ Enviar Print da Partida
+</button>
+<p class="text-xs text-zinc-500 mt-2">Envie prints para o admin aprovar e atualizar suas Kills no Rank.</p>
+</div>
+</section>
+
 <section class="admin-only space-y-6">
 <div class="bg-zinc-900 p-6 rounded border-2 border-yellow-600">
+
+<h3 class="text-yellow-500 font-bold uppercase mb-3">Revisão de Prints (<span id="contagemPendentes">0</span>)</h3>
+<div id="listaPendentes" class="space-y-4 mb-6"></div>
+<hr class="my-4 border-zinc-700">
 
 <h3 class="text-yellow-500 font-bold uppercase mb-3">Alterar Banner</h3>
 
@@ -95,7 +123,7 @@ Sortear Times
 
 </main>
 
-<div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4">
+<div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4 z-50">
 <div class="bg-zinc-900 p-8 rounded border border-red-600 max-w-md w-full">
 <h2 class="text-xl font-bold mb-4 text-center uppercase">Alistamento</h2>
 <input id="regNome" placeholder="Nome" class="w-full bg-black border p-2 mb-2">
@@ -103,6 +131,38 @@ Sortear Times
 <input id="regFone" placeholder="Telefone" class="w-full bg-black border p-2 mb-2">
 <button onclick="solicitarEntrada()" class="w-full bg-red-600 py-2">Enviar</button>
 <button onclick="fecharModal()" class="w-full mt-2 text-zinc-500 text-xs">Fechar</button>
+</div>
+</div>
+
+<div id="modalLogin" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4 z-50">
+<div class="bg-zinc-900 p-8 rounded border border-blue-600 max-w-md w-full">
+<h2 class="text-xl font-bold mb-4 text-center uppercase text-blue-500">Login Soldado</h2>
+<p class="text-xs text-zinc-400 mb-4 text-center">Use o email que você cadastrou no alistamento.</p>
+<input id="loginEmail" placeholder="Email" class="w-full bg-black border border-zinc-700 p-2 mb-2">
+<input id="loginSenha" type="password" placeholder="Senha" class="w-full bg-black border border-zinc-700 p-2 mb-4 hidden">
+<button id="btnAvancarLogin" onclick="verificarEmailLogin()" class="w-full bg-blue-600 py-2">Avançar</button>
+<button id="btnEntrarLogin" onclick="efetuarLogin()" class="w-full bg-blue-600 py-2 hidden">Entrar</button>
+<button id="btnCriarSenha" onclick="criarPrimeiraSenha()" class="w-full bg-green-600 py-2 hidden">Criar Senha e Entrar</button>
+<button onclick="fecharModalLogin()" class="w-full mt-2 text-zinc-500 text-xs">Fechar</button>
+</div>
+</div>
+
+<div id="modalPrint" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4 z-50">
+<div class="bg-zinc-900 p-6 rounded border border-blue-600 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+<h2 class="text-xl font-bold mb-4 text-center uppercase text-blue-500">Registrar Partida</h2>
+<p class="text-xs text-zinc-400 mb-4">Envie o print. A IA tentará ler. Se falhar, preencha manualmente (até 4 jogadores).</p>
+
+<input type="file" id="printPartida" accept="image/*" class="mb-4 text-xs w-full" onchange="processarPrintOCR()">
+<div id="statusOCR" class="text-xs text-yellow-500 mb-4 font-bold"></div>
+
+<div id="areaPreenchimentoPrint" class="hidden space-y-4">
+    <div class="bg-black p-3 rounded border border-zinc-800">
+        <h4 class="text-sm font-bold text-zinc-300 mb-2">Equipe e Kills</h4>
+        <div id="inputsJogadoresKills"></div>
+    </div>
+    <button onclick="enviarPrintParaAdmin()" class="w-full bg-green-600 py-2 font-bold uppercase rounded">Enviar para Aprovação</button>
+</div>
+<button onclick="fecharModalPrint()" class="w-full mt-4 text-zinc-500 text-xs">Cancelar</button>
 </div>
 </div>
 
@@ -125,13 +185,18 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const docRef = doc(db,"site","dados");
 
-let rank=[], espera=[], aprovados=[];
+// ADICIONEI: partidasPendentes
+let rank=[], espera=[], aprovados=[], partidasPendentes=[];
 let bannerAtual="";
+
+// ADICIONEI: Variaveis de controle do novo sistema
+let usuarioLogado = null;
+let printAtualBase64 = null;
 
 /* GARANTE DOC */
 const snap = await getDoc(docRef);
 if(!snap.exists()){
- await setDoc(docRef,{rank:[],espera:[],aprovados:[]});
+ await setDoc(docRef,{rank:[],espera:[],aprovados:[], partidasPendentes:[]}); // Adicionado partidasPendentes
 }
 
 /* SNAPSHOT */
@@ -142,6 +207,7 @@ onSnapshot(docRef, s=>{
  rank=d.rank||[];
  espera=d.espera||[];
  aprovados=d.aprovados||[];
+ partidasPendentes=d.partidasPendentes||[]; // Adicionado
 
  if(d.banner && d.banner !== bannerAtual){
    bannerAtual = d.banner;
@@ -156,6 +222,7 @@ async function salvar(){
    rank,
    espera,
    aprovados,
+   partidasPendentes, // Adicionado
    banner:bannerAtual
  },{merge:true});
 }
@@ -324,7 +391,243 @@ function renderTudo(){
  });
 
  contagemAprovados.textContent = aprovados.length;
+
+ // ------ ADICIONEI: RENDERIZAÇÃO DA LISTA DE PRINTS PENDENTES PARA O ADMIN ------
+ if(document.getElementById('listaPendentes')) {
+   const listaPendentes = document.getElementById('listaPendentes');
+   listaPendentes.innerHTML = "";
+   document.getElementById('contagemPendentes').textContent = partidasPendentes.length;
+   
+   partidasPendentes.forEach(p => {
+     let jogHtml = p.jogadores.map(j => `<li>${j.nome}: <span class="text-red-500">${j.kills} Kills</span></li>`).join('');
+     listaPendentes.innerHTML += `
+     <div class="bg-black p-3 rounded border border-zinc-700">
+        <div class="flex flex-col md:flex-row gap-4">
+          <img src="${p.imagem}" class="w-full md:w-32 h-20 object-cover cursor-pointer" onclick="window.open('${p.imagem}', '_blank')">
+          <div class="flex-1">
+            <p class="text-xs text-blue-400 mb-1">Enviado por: ${p.enviadoPor}</p>
+            <ul class="text-sm font-bold">${jogHtml}</ul>
+          </div>
+          <div class="flex flex-col gap-2 justify-center">
+            <button onclick="aprovarPrint(${p.id})" class="bg-green-600 px-3 py-1 text-xs font-bold rounded uppercase">Aprovar</button>
+            <button onclick="rejeitarPrint(${p.id})" class="bg-red-600 px-3 py-1 text-xs font-bold rounded uppercase">Rejeitar</button>
+          </div>
+        </div>
+     </div>`;
+   });
+ }
 }
+
+
+// ==============================================================================
+// TODAS AS FUNÇÕES ABAIXO SÃO NOVAS (IMPLANTADAS) PARA O SISTEMA DE LOGIN E IA
+// ==============================================================================
+
+window.fecharModalLogin = () => document.getElementById('modalLogin').classList.add('hidden');
+window.fecharModalPrint = () => document.getElementById('modalPrint').classList.add('hidden');
+
+window.abrirModalLogin = () => {
+  document.getElementById('modalLogin').classList.remove('hidden');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginSenha').value = '';
+  document.getElementById('loginSenha').classList.add('hidden');
+  document.getElementById('btnAvancarLogin').classList.remove('hidden');
+  document.getElementById('btnEntrarLogin').classList.add('hidden');
+  document.getElementById('btnCriarSenha').classList.add('hidden');
+};
+
+window.verificarEmailLogin = () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const usuario = aprovados.find(p => p.email === email);
+  
+  if(!usuario) return alert("Email não encontrado na lista de aprovados!");
+
+  document.getElementById('btnAvancarLogin').classList.add('hidden');
+  document.getElementById('loginSenha').classList.remove('hidden');
+
+  if(usuario.senha) {
+    document.getElementById('btnEntrarLogin').classList.remove('hidden');
+  } else {
+    alert("Primeiro acesso! Crie uma senha abaixo.");
+    document.getElementById('btnCriarSenha').classList.remove('hidden');
+  }
+};
+
+window.criarPrimeiraSenha = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value.trim();
+  if(!senha || senha.length < 4) return alert("Crie uma senha de no mínimo 4 caracteres.");
+
+  const index = aprovados.findIndex(p => p.email === email);
+  aprovados[index].senha = senha;
+  await salvar();
+  
+  alert("Senha criada com sucesso!");
+  efetuarLogin(email, senha);
+};
+
+window.efetuarLogin = (emailForcado = null, senhaForcada = null) => {
+  const email = emailForcado || document.getElementById('loginEmail').value.trim();
+  const senha = senhaForcada || document.getElementById('loginSenha').value.trim();
+  
+  const usuario = aprovados.find(p => p.email === email && p.senha === senha);
+  if(!usuario) return alert("Senha incorreta!");
+
+  usuarioLogado = usuario;
+  document.body.classList.add("membro-active");
+  document.getElementById('nomeMembroLogado').textContent = `Soldado ${usuario.nome}`;
+  fecharModalLogin();
+};
+
+window.logoutMembro = () => {
+  usuarioLogado = null;
+  document.body.classList.remove("membro-active");
+};
+
+/* --- SISTEMA DE PRINT E IA --- */
+window.abrirModalPrint = () => {
+  document.getElementById('modalPrint').classList.remove('hidden');
+  document.getElementById('printPartida').value = '';
+  document.getElementById('statusOCR').textContent = '';
+  document.getElementById('areaPreenchimentoPrint').classList.add('hidden');
+  printAtualBase64 = null;
+  gerarInputsFallback();
+};
+
+function gerarInputsFallback(nomesSugeridos = [], killsSugeridos = []) {
+  const div = document.getElementById('inputsJogadoresKills');
+  div.innerHTML = '';
+  
+  // Cria 4 linhas para os integrantes da equipe
+  for(let i=0; i<4; i++) {
+    let options = `<option value="">-- Selecione o Jogador --</option>`;
+    rank.forEach(p => {
+      let selected = (nomesSugeridos[i] && p.nome.toLowerCase().includes(nomesSugeridos[i].toLowerCase())) ? 'selected' : '';
+      options += `<option value="${p.nome}" ${selected}>${p.nome}</option>`;
+    });
+
+    let killSugerido = killsSugeridos[i] || '';
+
+    div.innerHTML += `
+      <div class="flex gap-2 mb-2">
+        <select id="jogadorPartida${i}" class="w-2/3 bg-black border border-zinc-700 text-white text-xs p-2">
+          ${options}
+        </select>
+        <input type="number" id="killPartida${i}" placeholder="Kills" value="${killSugerido}" class="w-1/3 bg-black border border-zinc-700 p-2 text-white text-xs">
+      </div>
+    `;
+  }
+}
+
+// Comprime a imagem antes de processar e salvar para não travar o Firebase
+function comprimirImagem(file, callback) {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = event => {
+    const img = new Image();
+    img.src = event.target.result;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 800;
+      const scaleSize = MAX_WIDTH / img.width;
+      canvas.width = MAX_WIDTH;
+      canvas.height = img.height * scaleSize;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      callback(canvas.toDataURL('image/jpeg', 0.6));
+    }
+  }
+}
+
+window.processarPrintOCR = () => {
+  const file = document.getElementById('printPartida').files[0];
+  if(!file) return;
+
+  const status = document.getElementById('statusOCR');
+  status.textContent = "IA lendo a imagem... Aguarde (pode levar alguns segundos).";
+  document.getElementById('areaPreenchimentoPrint').classList.add('hidden');
+
+  comprimirImagem(file, (base64) => {
+    printAtualBase64 = base64; // Guarda a imagem para enviar ao Admin
+
+    // Tesseract.js (IA OCR) tenta extrair o texto
+    Tesseract.recognize(base64, 'por', { logger: m => console.log(m) })
+    .then(({ data: { text } }) => {
+      status.textContent = "Leitura concluída. Verifique os dados e corrija se a IA errou.";
+      
+      let nomesEncontrados = [];
+      let killsEncontrados = [];
+      
+      rank.forEach(jogador => {
+        if(text.toLowerCase().includes(jogador.nome.toLowerCase())) {
+          nomesEncontrados.push(jogador.nome);
+        }
+      });
+
+      const numeros = text.match(/\d+/g);
+      if(numeros) killsEncontrados = numeros.slice(0, 4);
+
+      gerarInputsFallback(nomesEncontrados, killsEncontrados);
+      document.getElementById('areaPreenchimentoPrint').classList.remove('hidden');
+    })
+    .catch(err => {
+      status.textContent = "A IA falhou ao ler ou não reconheceu o texto. Por favor, preencha manualmente.";
+      gerarInputsFallback();
+      document.getElementById('areaPreenchimentoPrint').classList.remove('hidden');
+    });
+  });
+};
+
+window.enviarPrintParaAdmin = async () => {
+  if(!printAtualBase64) return alert("A imagem é obrigatória.");
+
+  let dadosJogadores = [];
+  for(let i=0; i<4; i++) {
+    const nome = document.getElementById(`jogadorPartida${i}`).value;
+    const kills = parseInt(document.getElementById(`killPartida${i}`).value) || 0;
+    if(nome) dadosJogadores.push({ nome, kills });
+  }
+
+  if(dadosJogadores.length === 0) return alert("Selecione pelo menos 1 jogador da equipe.");
+
+  partidasPendentes.push({
+    id: Date.now(),
+    enviadoPor: usuarioLogado.nome,
+    imagem: printAtualBase64,
+    jogadores: dadosJogadores
+  });
+
+  await salvar();
+  alert("Partida enviada para revisão do Admin!");
+  fecharModalPrint();
+};
+
+/* --- APROVAÇÃO ADMIN DE PRINTS --- */
+window.aprovarPrint = async (id) => {
+  const idx = partidasPendentes.findIndex(p => p.id === id);
+  if(idx === -1) return;
+
+  const partida = partidasPendentes[idx];
+  
+  // Adiciona Kills e Partidas na lista oficial 'rank'
+  partida.jogadores.forEach(j => {
+    let jogadorRank = rank.find(r => r.nome === j.nome);
+    if(jogadorRank) {
+      jogadorRank.matches++;
+      jogadorRank.kills += j.kills;
+    }
+  });
+
+  partidasPendentes.splice(idx, 1);
+  await salvar();
+  alert("Print aprovado! O Rank e Kills dos jogadores foram atualizados automaticamente.");
+};
+
+window.rejeitarPrint = async (id) => {
+  if(!confirm("Tem certeza que deseja rejeitar este print e mandar de volta para revisão/excluir?")) return;
+  partidasPendentes = partidasPendentes.filter(p => p.id !== id);
+  await salvar();
+};
 
 </script>
 
