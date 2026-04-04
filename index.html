@@ -8,6 +8,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
 <style>
 body { font-family:'Oswald',sans-serif;background:#050505;color:#eee; }
@@ -83,6 +84,13 @@ Sair
     </button>
 </div>
 </div>
+
+<div id="squadsPublicosContainer" class="bg-black border border-zinc-800 rounded p-4 mt-6">
+    <h2 class="text-lg md:text-xl font-bold mb-4 text-center uppercase text-blue-500 border-b border-zinc-800 pb-2">Seu Squad Sorteado</h2>
+    <div id="squadsPublicosGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    </div>
+</div>
+
 </section>
 
 <section class="admin-only space-y-6">
@@ -120,9 +128,17 @@ Lista de Aprovados (<span id="contagemAprovados"></span>)
 <hr class="my-4 border-zinc-700">
 
 <h3 class="text-yellow-500 font-bold uppercase mb-3">Sorteador</h3>
-<button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs w-full sm:w-auto font-bold uppercase">
-Sortear Times
-</button>
+<div class="flex flex-col sm:flex-row gap-2">
+    <button onclick="sortearEquipes()" class="bg-blue-600 px-4 py-2 rounded text-xs w-full sm:w-auto font-bold uppercase">
+    Sortear Times
+    </button>
+    <button onclick="enviarSquads()" class="bg-green-600 px-4 py-2 rounded text-xs w-full sm:w-auto font-bold uppercase">
+    Enviar Squad
+    </button>
+    <button onclick="resetarSquads()" class="bg-red-600 px-4 py-2 rounded text-xs w-full sm:w-auto font-bold uppercase">
+    Resetar Squad
+    </button>
+</div>
 <div id="equipesContainer" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
 
 </div>
@@ -174,12 +190,17 @@ Sortear Times
 <div id="modalConfirmacao" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4 z-50">
 <div class="bg-zinc-900 p-5 md:p-8 rounded border border-yellow-600 max-w-md w-full">
 <h2 class="text-lg font-bold mb-2 text-center uppercase text-yellow-500">Confirme seu Email</h2>
-<p class="text-xs text-zinc-400 mb-4 text-center">Enviamos um link oficial para o email abaixo. Clique nele para ativar sua conta!<br><br><strong id="txtEmailConfirmacao" class="text-white text-sm"></strong></p>
+<p class="text-xs text-zinc-400 mb-4 text-center">Enviamos um <strong class="text-yellow-500">código de 6 dígitos</strong> para o email abaixo. Digite-o para ativar sua conta!<br><br><strong id="txtEmailConfirmacao" class="text-white text-sm"></strong></p>
+
+<input id="inputCodigoConfirmacao" placeholder="Ex: 123456" type="number" class="w-full bg-black border border-zinc-700 p-2 md:p-3 mb-4 rounded text-center text-lg text-white font-bold tracking-[0.3em]">
+<button id="btnValidarCodigo" onclick="validarCodigoEmail()" class="w-full bg-green-600 hover:bg-green-500 py-3 rounded font-bold uppercase text-sm mb-4">Validar Código</button>
+
+<hr class="border-zinc-700 mb-4">
 
 <input id="novoEmailConfirmacao" placeholder="Digitar novo email (opcional)" class="w-full bg-black border border-zinc-700 p-2 md:p-3 mb-2 rounded text-sm text-white">
-<button onclick="trocarEmailMembro()" class="w-full bg-zinc-700 hover:bg-zinc-600 py-2 rounded font-bold uppercase text-xs mb-4 text-white">Mudar Email e Reenviar Link</button>
+<button onclick="trocarEmailMembro()" class="w-full bg-zinc-700 hover:bg-zinc-600 py-2 rounded font-bold uppercase text-xs mb-4 text-white">Mudar Email e Reenviar Código</button>
 
-<button onclick="reenviarEmailConfirmacao()" class="w-full bg-blue-600 py-3 rounded font-bold uppercase text-sm mb-3">Reenviar Link de Confirmação</button>
+<button onclick="reenviarEmailConfirmacao()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded font-bold uppercase text-sm mb-3">Reenviar Código</button>
 
 <button onclick="fecharModalConfirmacao()" class="w-full mt-3 text-zinc-500 text-xs uppercase font-bold">Voltar para o Login</button>
 </div>
@@ -209,8 +230,13 @@ Sortear Times
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot }
 from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, updateEmail, signOut } 
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateEmail, signOut } 
 from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+
+// INICIALIZAR EMAILJS AQUI
+emailjs.init("beHJ57fuFXDjfi6hL"); 
+const EMAILJS_SERVICE_ID = "service_g9x5lzo";
+const EMAILJS_TEMPLATE_ID = "template_5t7fsta";
 
 const firebaseConfig = {
   apiKey:"AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
@@ -227,6 +253,8 @@ const auth = getAuth(app);
 const docRef = doc(db,"site","dados");
 
 let rank=[], espera=[], aprovados=[], partidasPendentes=[];
+let equipesSorteadas=[]; 
+let equipesSorteioLocal=[]; 
 let bannerAtual="";
 let usuarioLogado = null;
 let printAtualBase64 = null;
@@ -234,7 +262,7 @@ let usuarioAguardandoConfirmacao = null;
 
 const snap = await getDoc(docRef);
 if(!snap.exists()){
- await setDoc(docRef,{rank:[],espera:[],aprovados:[], partidasPendentes:[]}); 
+ await setDoc(docRef,{rank:[],espera:[],aprovados:[], partidasPendentes:[], equipesSorteadas:[]}); 
 }
 
 onSnapshot(docRef, s=>{
@@ -245,6 +273,7 @@ onSnapshot(docRef, s=>{
  espera=d.espera||[];
  aprovados=d.aprovados||[];
  partidasPendentes=d.partidasPendentes||[]; 
+ equipesSorteadas=d.equipesSorteadas||[]; 
 
  if(d.banner && d.banner !== bannerAtual){
    bannerAtual = d.banner;
@@ -260,6 +289,7 @@ async function salvar(){
    espera,
    aprovados,
    partidasPendentes,
+   equipesSorteadas, 
    banner:bannerAtual
  },{merge:true});
 }
@@ -283,7 +313,6 @@ function comprimirImagem(file, callback) {
   }
 }
 
-// NECESSÁRIO PARA O ONCHANGE DO HTML ENCONTRAR A FUNÇÃO
 window.comprimirImagem = comprimirImagem;
 
 window.loginAdmin=()=>{
@@ -326,6 +355,8 @@ window.aprovar=async(id)=>{
  if(i===-1) return;
  const j=espera.splice(i,1)[0];
  rank.push({nome:j.nome,matches:0,kills:0});
+ // Definir que o membro começa com email não verificado
+ j.emailVerificado = false;
  aprovados.push(j);
  await salvar();
 };
@@ -363,20 +394,40 @@ window.sortearEquipes = () => {
   if (rank.length < 2) return alert("Precisa 2+ jogadores");
 
   const lista = [...rank].sort(() => Math.random() - 0.5);
-  const equipes = [];
+  equipesSorteioLocal = []; 
 
   for (let i = 0; i < lista.length; i += 4) {
-    equipes.push(lista.slice(i, i + 4).map(p => p.nome));
+    equipesSorteioLocal.push({
+        membros: lista.slice(i, i + 4).map(p => p.nome)
+    });
   }
 
   equipesContainer.innerHTML = "";
-  equipes.forEach((eq, index) => {
+  equipesSorteioLocal.forEach((eq, index) => {
     equipesContainer.innerHTML += `
       <div class="equipe text-sm font-bold text-center flex items-center justify-center ${index % 2 === 0 ? 'bg-red-500' : 'bg-blue-500'}">
-        Equipe ${index + 1}: <br>${eq.join(", ")}
+        Equipe ${index + 1}: <br>${eq.membros.join(", ")}
       </div>
     `;
   });
+};
+
+window.enviarSquads = async () => {
+    if(equipesSorteioLocal.length === 0) return alert("Por favor, sorteie os times primeiro clicando em 'Sortear Times'!");
+    if(!confirm("Deseja confirmar o envio dos Squads para o Painel dos Soldados? (Se não, nada será alterado)")) return;
+    
+    equipesSorteadas = [...equipesSorteioLocal];
+    await salvar();
+    alert("Squads enviados para o painel dos soldados!");
+};
+
+window.resetarSquads = async () => {
+    if(!confirm("Deseja resetar e limpar os Squads para todos? (Se não, nada será alterado)")) return;
+    
+    equipesSorteadas = [];
+    equipesSorteioLocal = [];
+    equipesContainer.innerHTML = "";
+    await salvar();
 };
 
 window.uploadLocalBanner=()=>{
@@ -394,9 +445,9 @@ window.uploadLocalBanner=()=>{
 window.usarLinkBanner=async()=>{
  const link=bannerLink.value.trim();
  if(!link) return alert("Link inválido");
- bannerAtual=link;
- bannerImg.src=bannerAtual;
- await salvar();
+  bannerAtual=link;
+  bannerImg.src=bannerAtual;
+  await salvar();
 };
 
 window.atualizarFotoMembro = async () => {
@@ -437,6 +488,52 @@ function renderTudo(){
    </td>
   </tr>`;
  });
+
+ const squadsGrid = document.getElementById('squadsPublicosGrid');
+ 
+ if(equipesSorteadas && equipesSorteadas.length > 0) {
+     squadsGrid.innerHTML = "";
+     let usuarioPossuiSquad = false;
+
+     equipesSorteadas.forEach((eq, index) => {
+         if(usuarioLogado && eq.membros.includes(usuarioLogado.nome)) {
+             usuarioPossuiSquad = true;
+             let htmlMembros = '';
+             
+             eq.membros.forEach(nomeJog => {
+                 const userApp = aprovados.find(a => a.nome === nomeJog);
+                 const telefone = userApp && userApp.fone ? userApp.fone : 'Sem tel';
+                 
+                 htmlMembros += `
+                 <li class="flex justify-between items-center text-xs p-2 border-b border-zinc-800 last:border-0 bg-black">
+                     <span class="font-bold ${nomeJog === usuarioLogado.nome ? 'text-green-400' : 'text-zinc-300'}">${nomeJog} ${nomeJog === usuarioLogado.nome ? '(Você)' : ''}</span>
+                     <span class="text-zinc-500">${telefone}</span>
+                 </li>`;
+             });
+             
+             squadsGrid.innerHTML += `
+             <div class="bg-zinc-900 rounded border border-zinc-700 overflow-hidden">
+                 <div class="p-2 text-center text-sm font-bold uppercase ${index % 2 === 0 ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}">
+                     Squad ${index + 1}
+                 </div>
+                 <ul>${htmlMembros}</ul>
+             </div>`;
+         }
+     });
+
+     if(usuarioLogado && !usuarioPossuiSquad) {
+         squadsGrid.innerHTML = `
+         <div class="col-span-1 sm:col-span-2 lg:col-span-4 text-center">
+             <p class="text-zinc-500 text-sm italic font-bold">Sorteio realizado, mas você não está em nenhum Squad desta rodada.</p>
+         </div>`;
+     }
+
+ } else {
+     squadsGrid.innerHTML = `
+     <div class="col-span-1 sm:col-span-2 lg:col-span-4 text-center">
+         <p class="text-zinc-500 text-sm italic font-bold">Sorteio não houve ainda.</p>
+     </div>`;
+ }
 
  listaEspera.innerHTML="";
  espera.forEach(p=>{
@@ -551,6 +648,20 @@ window.verificarEmailLogin = () => {
   }
 };
 
+// FUNÇÃO DE ENVIO DO EMAILJS
+async function dispararEmailJSCodigo(email, nome, codigo) {
+    try {
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            email_destino: email,
+            nome_soldado: nome,
+            codigo_verificacao: codigo
+        });
+    } catch(err) {
+        console.error("Erro no EmailJS:", err);
+        alert("Erro ao enviar código para o email. Verifique a configuração do EmailJS.");
+    }
+}
+
 window.criarPrimeiraSenha = async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const senha = document.getElementById('loginSenha').value.trim();
@@ -558,18 +669,25 @@ window.criarPrimeiraSenha = async () => {
 
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
-    await sendEmailVerification(userCredential.user);
-
+    
+    // GERAR E SALVAR O CÓDIGO (PIN)
+    const codigoPin = Math.floor(100000 + Math.random() * 900000).toString();
     const index = aprovados.findIndex(p => p.email === email);
     aprovados[index].contaCriada = true;
+    aprovados[index].codigoVerificacao = codigoPin;
+    aprovados[index].emailVerificado = false;
     await salvar();
-    
-    alert("Conta criada com sucesso! Um email de verificação foi enviado. Cheque sua caixa de entrada.");
+
+    alert("Conta criada no banco! Um código foi enviado para seu email. Aguarde uns instantes.");
     
     usuarioAguardandoConfirmacao = aprovados[index];
     fecharModalLogin();
     document.getElementById('modalConfirmacao').classList.remove('hidden');
     document.getElementById('txtEmailConfirmacao').textContent = email;
+    document.getElementById('inputCodigoConfirmacao').value = "";
+
+    // DISPARAR EMAILJS
+    await dispararEmailJSCodigo(email, aprovados[index].nome, codigoPin);
 
   } catch(error) {
     alert("Erro ao criar conta: " + error.message);
@@ -583,21 +701,28 @@ window.efetuarLogin = async () => {
   
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, senha);
-    const user = userCredential.user;
 
-    if(!user.emailVerified) {
-      usuarioAguardandoConfirmacao = usuario;
-      fecharModalLogin();
-      document.getElementById('modalConfirmacao').classList.remove('hidden');
-      document.getElementById('txtEmailConfirmacao').textContent = user.email;
-      return;
+    // ESSA TRAVA BLOQUEIA TODOS: NOVOS E ANTIGOS SE NÃO TIVEREM CONFIRMADO AINDA
+    if(!usuario.emailVerificado) {
+        // Gerar e mandar novo PIN automaticamente para garantir
+        const novoPin = Math.floor(100000 + Math.random() * 900000).toString();
+        usuario.codigoVerificacao = novoPin;
+        await salvar();
+        
+        usuarioAguardandoConfirmacao = usuario;
+        fecharModalLogin();
+        document.getElementById('modalConfirmacao').classList.remove('hidden');
+        document.getElementById('txtEmailConfirmacao').textContent = userCredential.user.email;
+        document.getElementById('inputCodigoConfirmacao').value = "";
+        
+        await dispararEmailJSCodigo(usuario.email, usuario.nome, novoPin);
+        return;
     }
 
     usuarioLogado = usuario;
     document.body.classList.add("membro-active");
-    document.getElementById('nomeMembroLogado').textContent = `Soldado ${usuario.nome}`;
+    document.getElementById('nomeMembroLogado').textContent = `Soldado ${usuarioLogado.nome}`;
     
-    // MOSTRAR AVISO SE MEMBRO ANTIGO NÃO TEM FOTO
     if(!usuario.fotoPerfil) {
         document.getElementById('avisoFotoMembro').classList.remove('hidden');
     } else {
@@ -605,21 +730,29 @@ window.efetuarLogin = async () => {
     }
 
     fecharModalLogin();
+    renderTudo(); 
 
   } catch(error) {
     if((error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') && usuario && usuario.senha === senha) {
        try {
            const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
-           await sendEmailVerification(userCredential.user);
            
+           const codigoPin = Math.floor(100000 + Math.random() * 900000).toString();
            usuario.contaCriada = true;
+           usuario.codigoVerificacao = codigoPin;
+           usuario.emailVerificado = false;
            await salvar();
 
-           alert("Sua conta foi atualizada para o novo sistema de segurança do Firebase! Um email de verificação foi enviado.");
+           alert("Sua conta foi migrada para a nova segurança. Um código de verificação foi enviado para seu email.");
+           
            usuarioAguardandoConfirmacao = usuario;
            fecharModalLogin();
            document.getElementById('modalConfirmacao').classList.remove('hidden');
            document.getElementById('txtEmailConfirmacao').textContent = email;
+           document.getElementById('inputCodigoConfirmacao').value = "";
+
+           await dispararEmailJSCodigo(email, usuario.nome, codigoPin);
+
        } catch(createErr) {
            alert("Erro ao migrar sua conta antiga: " + createErr.message);
        }
@@ -627,6 +760,39 @@ window.efetuarLogin = async () => {
        alert("Senha incorreta ou erro no Firebase: " + error.message);
     }
   }
+};
+
+// FUNÇÃO QUE VERIFICA O CÓDIGO (PIN) DIGITADO
+window.validarCodigoEmail = async () => {
+    const codDigitado = document.getElementById('inputCodigoConfirmacao').value.trim();
+    
+    if(!codDigitado) return alert("Por favor, digite o código recebido.");
+    if(!usuarioAguardandoConfirmacao) return;
+
+    if(codDigitado === usuarioAguardandoConfirmacao.codigoVerificacao) {
+        // Sucesso!
+        const index = aprovados.findIndex(p => p.email === usuarioAguardandoConfirmacao.email);
+        aprovados[index].emailVerificado = true;
+        aprovados[index].codigoVerificacao = null; // Limpa por segurança
+        await salvar();
+
+        alert("Conta verificada com sucesso! Bem-vindo(a).");
+        
+        usuarioLogado = aprovados[index];
+        document.body.classList.add("membro-active");
+        document.getElementById('nomeMembroLogado').textContent = `Soldado ${usuarioLogado.nome}`;
+        
+        if(!usuarioLogado.fotoPerfil) {
+            document.getElementById('avisoFotoMembro').classList.remove('hidden');
+        } else {
+            document.getElementById('avisoFotoMembro').classList.add('hidden');
+        }
+
+        fecharModalConfirmacao();
+        renderTudo();
+    } else {
+        alert("Código incorreto. Tente novamente ou peça para reenviar o código.");
+    }
 };
 
 window.fecharModalConfirmacao = () => {
@@ -643,35 +809,45 @@ window.trocarEmailMembro = async () => {
   try {
     if(auth.currentUser) {
         await updateEmail(auth.currentUser, novoEmail);
-        await sendEmailVerification(auth.currentUser);
-
+        
         const index = aprovados.findIndex(p => p.email === usuarioAguardandoConfirmacao.email);
         if(index > -1) {
+          const novoPin = Math.floor(100000 + Math.random() * 900000).toString();
+          
           aprovados[index].email = novoEmail;
+          aprovados[index].codigoVerificacao = novoPin;
           usuarioAguardandoConfirmacao.email = novoEmail;
+          usuarioAguardandoConfirmacao.codigoVerificacao = novoPin;
+          
           document.getElementById('txtEmailConfirmacao').textContent = novoEmail;
           document.getElementById('novoEmailConfirmacao').value = '';
           await salvar();
-          alert("Email alterado no sistema! Um NOVO link foi enviado para o email atualizado.");
+          alert("Email alterado! Um NOVO código foi enviado.");
+          
+          await dispararEmailJSCodigo(novoEmail, aprovados[index].nome, novoPin);
         }
     } else {
         alert("Sua sessão expirou. Feche, faça login novamente com a senha e tente trocar o email.");
     }
   } catch (error) {
-    alert("Erro ao trocar email: " + error.message + " (O Firebase pode exigir que você feche e faça login novamente por segurança)");
+    alert("Erro ao trocar email: " + error.message);
   }
 };
 
 window.reenviarEmailConfirmacao = async () => {
+  if(!usuarioAguardandoConfirmacao) return;
   try {
-    if(auth.currentUser) {
-        await sendEmailVerification(auth.currentUser);
-        alert(`Um novo link oficial de confirmação foi enviado para: ${auth.currentUser.email}`);
-    } else {
-        alert("Sua sessão expirou. Tente fazer o login novamente.");
-    }
+      const novoPin = Math.floor(100000 + Math.random() * 900000).toString();
+      const index = aprovados.findIndex(p => p.email === usuarioAguardandoConfirmacao.email);
+      
+      aprovados[index].codigoVerificacao = novoPin;
+      usuarioAguardandoConfirmacao.codigoVerificacao = novoPin;
+      await salvar();
+
+      await dispararEmailJSCodigo(usuarioAguardandoConfirmacao.email, usuarioAguardandoConfirmacao.nome, novoPin);
+      alert(`Um novo código foi enviado via EmailJS para: ${usuarioAguardandoConfirmacao.email}`);
   } catch(error) {
-    alert("Erro ao reenviar: " + error.message);
+      alert("Erro ao reenviar: " + error.message);
   }
 };
 
@@ -679,6 +855,7 @@ window.logoutMembro = async () => {
   await signOut(auth);
   usuarioLogado = null;
   document.body.classList.remove("membro-active");
+  renderTudo(); 
 };
 
 window.abrirModalPrint = () => {
