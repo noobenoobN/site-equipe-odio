@@ -159,6 +159,17 @@ Lista de Aprovados (<span id="contagemAprovados"></span>)
 </table>
 </div>
 
+<div id="modalPerfil" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4 z-50" onclick="if(event.target === this) fecharPerfil()">
+    <div class="bg-zinc-900 p-5 rounded border border-zinc-700 max-w-sm w-full relative">
+        <button onclick="fecharPerfil()" class="absolute top-2 right-3 text-zinc-400 hover:text-white font-bold text-xl">&times;</button>
+        <div id="perfilZoomContainer" class="w-full h-64 mb-4 flex items-center justify-center bg-zinc-800 rounded border border-zinc-700">
+             <img id="perfilZoomFoto" class="w-full h-full object-cover rounded hidden" src="">
+             <span id="perfilZoomSemFoto" class="text-zinc-500 text-sm font-bold uppercase hidden">Sem Foto</span>
+        </div>
+        <h2 id="perfilZoomNome" class="text-xl font-bold text-center text-white uppercase tracking-wider"></h2>
+    </div>
+</div>
+
 <div id="modalCadastro" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4 z-50">
 <div class="bg-zinc-900 p-5 md:p-8 rounded border border-red-600 max-w-md w-full">
 <h2 class="text-lg md:text-xl font-bold mb-4 text-center uppercase">Alistamento</h2>
@@ -314,6 +325,32 @@ function comprimirImagem(file, callback) {
 }
 
 window.comprimirImagem = comprimirImagem;
+
+// NOVAS FUNÇÕES PARA O PERFIL ZOOM
+window.abrirPerfil = (nome) => {
+    const usuario = aprovados.find(a => a.nome === nome);
+    const foto = usuario && usuario.fotoPerfil ? usuario.fotoPerfil : '';
+    const imgEl = document.getElementById('perfilZoomFoto');
+    const semFotoEl = document.getElementById('perfilZoomSemFoto');
+
+    if(foto) {
+        imgEl.src = foto;
+        imgEl.classList.remove('hidden');
+        semFotoEl.classList.add('hidden');
+    } else {
+        imgEl.src = '';
+        imgEl.classList.add('hidden');
+        semFotoEl.classList.remove('hidden');
+    }
+    
+    document.getElementById('perfilZoomNome').textContent = nome;
+    document.getElementById('modalPerfil').classList.remove('hidden');
+};
+
+window.fecharPerfil = () => {
+    document.getElementById('modalPerfil').classList.add('hidden');
+};
+
 
 window.loginAdmin=()=>{
  if(prompt("Senha admin:")==="malvadeza123"){
@@ -482,7 +519,10 @@ function renderTudo(){
    <td class="p-3 md:p-4 font-bold text-zinc-300">
       <div class="flex items-center gap-3">
           ${avatarHtml}
-          <span>${p.nome}</span>
+          <div class="flex flex-col">
+              <span>${p.nome}</span>
+              <button onclick="abrirPerfil('${p.nome}')" class="text-[10px] text-blue-500 hover:text-blue-400 text-left uppercase mt-0.5 cursor-pointer">Ver Perfil</button>
+          </div>
       </div>
    </td>
    <td class="p-3 md:p-4 text-center">${p.matches||0}</td>
