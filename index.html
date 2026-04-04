@@ -151,6 +151,20 @@ Sortear Times
 </div>
 </div>
 
+<div id="modalConfirmacao" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4 z-50">
+<div class="bg-zinc-900 p-5 md:p-8 rounded border border-yellow-600 max-w-md w-full">
+<h2 class="text-lg font-bold mb-2 text-center uppercase text-yellow-500">Confirme seu Email</h2>
+<p class="text-xs text-zinc-400 mb-4 text-center">Enviamos um link oficial para o email abaixo. Clique nele para ativar sua conta!<br><br><strong id="txtEmailConfirmacao" class="text-white text-sm"></strong></p>
+
+<input id="novoEmailConfirmacao" placeholder="Digitar novo email (opcional)" class="w-full bg-black border border-zinc-700 p-2 md:p-3 mb-2 rounded text-sm text-white">
+<button onclick="trocarEmailMembro()" class="w-full bg-zinc-700 hover:bg-zinc-600 py-2 rounded font-bold uppercase text-xs mb-4 text-white">Mudar Email e Reenviar Link</button>
+
+<button onclick="reenviarEmailConfirmacao()" class="w-full bg-blue-600 py-3 rounded font-bold uppercase text-sm mb-3">Reenviar Link de Confirmação</button>
+
+<button onclick="fecharModalConfirmacao()" class="w-full mt-3 text-zinc-500 text-xs uppercase font-bold">Voltar para o Login</button>
+</div>
+</div>
+
 <div id="modalPrint" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden p-4 z-50">
 <div class="bg-zinc-900 p-5 md:p-6 rounded border border-blue-600 max-w-lg w-full max-h-[90vh] overflow-y-auto">
 <h2 class="text-lg md:text-xl font-bold mb-2 text-center uppercase text-blue-500">Registrar Partida</h2>
@@ -175,6 +189,9 @@ Sortear Times
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot }
 from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+// IMPORTAÇÃO NOVA DO FIREBASE AUTH
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, updateEmail, signOut } 
+from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey:"AIzaSyDkwukyKZVEZKiP4J75tkUNDisqaC4KLlk",
@@ -187,12 +204,14 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app); // INICIALIZA O AUTH
 const docRef = doc(db,"site","dados");
 
 let rank=[], espera=[], aprovados=[], partidasPendentes=[];
 let bannerAtual="";
 let usuarioLogado = null;
 let printAtualBase64 = null;
+let usuarioAguardandoConfirmacao = null; 
 
 const snap = await getDoc(docRef);
 if(!snap.exists()){
@@ -243,8 +262,14 @@ window.solicitarEntrada=async()=>{
  const email=regEmail.value.trim();
  const fone=regFone.value.trim();
  if(!nome||!email||!fone) return alert("Preencha tudo");
+
+ // BLOQUEIO DE CADASTRO DUPLO MANTIDO
+ const emailDuplicado = espera.find(p=>p.email===email) || aprovados.find(p=>p.email===email);
+ if(emailDuplicado) return alert("Este email já está cadastrado no nosso sistema!");
+
  espera.push({nome,email,fone,id:Date.now()});
  await salvar();
+ alert("Alistamento enviado com sucesso!");
  fecharModal();
 };
 
@@ -269,11 +294,9 @@ window.removerAprovado=async(email)=>{
  await salvar();
 };
 
-// --- FUNÇÃO NOVA: Remover do Rank Individualmente ---
 window.removerDoRank=async(nome)=>{
   if(!confirm(`Tem certeza que deseja remover ${nome} do Rank?`)) return;
   rank = rank.filter(p => p.nome !== nome);
-  // Remove dos aprovados para manter o banco de dados limpo
   aprovados = aprovados.filter(p => p.nome !== nome);
   await salvar();
 };
@@ -329,10 +352,8 @@ window.usarLinkBanner=async()=>{
 };
 
 function renderTudo(){
-
  rankBody.innerHTML="";
  rank.forEach((p,i)=>{
-  // Inserção do botão novo (Del) dentro da renderização da tabela
   rankBody.innerHTML+=`
   <tr class="border-b border-zinc-800 last:border-0">
    <td class="p-3 md:p-4">${i+1}</td>
@@ -450,10 +471,11 @@ window.verificarEmailLogin = () => {
   document.getElementById('btnAvancarLogin').classList.add('hidden');
   document.getElementById('loginSenha').classList.remove('hidden');
 
-  if(usuario.senha) {
+  // Checa se já criou pelo Auth novo ou se tinha senha antiga
+  if(usuario.contaCriada || usuario.senha) {
     document.getElementById('btnEntrarLogin').classList.remove('hidden');
   } else {
-    alert("Primeiro acesso! Crie uma senha abaixo.");
+    alert("Primeiro acesso! Crie uma senha (Mínimo 6 caracteres) abaixo.");
     document.getElementById('btnCriarSenha').classList.remove('hidden');
   }
 };
@@ -461,30 +483,123 @@ window.verificarEmailLogin = () => {
 window.criarPrimeiraSenha = async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const senha = document.getElementById('loginSenha').value.trim();
-  if(!senha || senha.length < 4) return alert("Crie uma senha de no mínimo 4 caracteres.");
+  if(!senha || senha.length < 6) return alert("O Firebase exige uma senha de no mínimo 6 caracteres.");
 
-  const index = aprovados.findIndex(p => p.email === email);
-  aprovados[index].senha = senha;
-  await salvar();
-  
-  alert("Senha criada com sucesso!");
-  efetuarLogin(email, senha);
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
+    await sendEmailVerification(userCredential.user);
+
+    const index = aprovados.findIndex(p => p.email === email);
+    aprovados[index].contaCriada = true;
+    await salvar();
+    
+    alert("Conta criada com sucesso! Um email de verificação foi enviado. Cheque sua caixa de entrada.");
+    
+    usuarioAguardandoConfirmacao = aprovados[index];
+    fecharModalLogin();
+    document.getElementById('modalConfirmacao').classList.remove('hidden');
+    document.getElementById('txtEmailConfirmacao').textContent = email;
+
+  } catch(error) {
+    alert("Erro ao criar conta: " + error.message);
+  }
 };
 
-window.efetuarLogin = (emailForcado = null, senhaForcada = null) => {
-  const email = emailForcado || document.getElementById('loginEmail').value.trim();
-  const senha = senhaForcada || document.getElementById('loginSenha').value.trim();
+window.efetuarLogin = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value.trim();
+  const usuario = aprovados.find(p => p.email === email);
   
-  const usuario = aprovados.find(p => p.email === email && p.senha === senha);
-  if(!usuario) return alert("Senha incorreta!");
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, senha);
+    const user = userCredential.user;
 
-  usuarioLogado = usuario;
-  document.body.classList.add("membro-active");
-  document.getElementById('nomeMembroLogado').textContent = `Soldado ${usuario.nome}`;
-  fecharModalLogin();
+    // FIREBASE AUTH: CHECA SE O EMAIL FOI CONFIRMADO CLICANDO NO LINK
+    if(!user.emailVerified) {
+      usuarioAguardandoConfirmacao = usuario;
+      fecharModalLogin();
+      document.getElementById('modalConfirmacao').classList.remove('hidden');
+      document.getElementById('txtEmailConfirmacao').textContent = user.email;
+      return;
+    }
+
+    usuarioLogado = usuario;
+    document.body.classList.add("membro-active");
+    document.getElementById('nomeMembroLogado').textContent = `Soldado ${usuario.nome}`;
+    fecharModalLogin();
+
+  } catch(error) {
+    // MIGRAÇÃO AUTOMÁTICA: Se o cara já tinha conta no sistema antigo (só Firestore) mas não no Firebase Auth
+    if((error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') && usuario && usuario.senha === senha) {
+       try {
+           const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
+           await sendEmailVerification(userCredential.user);
+           
+           usuario.contaCriada = true;
+           await salvar();
+
+           alert("Sua conta foi atualizada para o novo sistema de segurança do Firebase! Um email de verificação foi enviado.");
+           usuarioAguardandoConfirmacao = usuario;
+           fecharModalLogin();
+           document.getElementById('modalConfirmacao').classList.remove('hidden');
+           document.getElementById('txtEmailConfirmacao').textContent = email;
+       } catch(createErr) {
+           alert("Erro ao migrar sua conta antiga: " + createErr.message);
+       }
+    } else {
+       alert("Senha incorreta ou erro no Firebase: " + error.message);
+    }
+  }
 };
 
-window.logoutMembro = () => {
+window.fecharModalConfirmacao = () => {
+  document.getElementById('modalConfirmacao').classList.add('hidden');
+};
+
+window.trocarEmailMembro = async () => {
+  const novoEmail = document.getElementById('novoEmailConfirmacao').value.trim();
+  if(!novoEmail || !novoEmail.includes('@')) return alert("Digite um email válido.");
+
+  const emailDuplicado = espera.find(p=>p.email===novoEmail) || aprovados.find(p=>p.email===novoEmail);
+  if(emailDuplicado) return alert("Este email já está em uso por outro membro!");
+
+  try {
+    if(auth.currentUser) {
+        await updateEmail(auth.currentUser, novoEmail);
+        await sendEmailVerification(auth.currentUser);
+
+        const index = aprovados.findIndex(p => p.email === usuarioAguardandoConfirmacao.email);
+        if(index > -1) {
+          aprovados[index].email = novoEmail;
+          usuarioAguardandoConfirmacao.email = novoEmail;
+          document.getElementById('txtEmailConfirmacao').textContent = novoEmail;
+          document.getElementById('novoEmailConfirmacao').value = '';
+          await salvar();
+          alert("Email alterado no sistema! Um NOVO link foi enviado para o email atualizado.");
+        }
+    } else {
+        alert("Sua sessão expirou. Feche, faça login novamente com a senha e tente trocar o email.");
+    }
+  } catch (error) {
+    alert("Erro ao trocar email: " + error.message + " (O Firebase pode exigir que você feche e faça login novamente por segurança)");
+  }
+};
+
+window.reenviarEmailConfirmacao = async () => {
+  try {
+    if(auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        alert(`Um novo link oficial de confirmação foi enviado para: ${auth.currentUser.email}`);
+    } else {
+        alert("Sua sessão expirou. Tente fazer o login novamente.");
+    }
+  } catch(error) {
+    alert("Erro ao reenviar: " + error.message);
+  }
+};
+
+window.logoutMembro = async () => {
+  await signOut(auth);
   usuarioLogado = null;
   document.body.classList.remove("membro-active");
 };
@@ -498,7 +613,6 @@ window.abrirModalPrint = () => {
   gerarInputsFallback();
 };
 
-// --- AJUSTE: Adicionado campo Hora no formulário de Fallback ---
 function gerarInputsFallback(nomesSugeridos = [], killsSugeridos = [], horaSugerida = "") {
   const div = document.getElementById('inputsJogadoresKills');
   div.innerHTML = `
@@ -566,15 +680,12 @@ window.processarPrintOCR = () => {
       let killsEncontrados = [];
       let horaEncontrada = "";
 
-      // 1. Extração da Hora (Formato HH:MM)
       const matchHora = text.match(/\b([01]?[0-9]|2[0-3]):[0-5][0-9]\b/);
       if(matchHora) {
         horaEncontrada = matchHora[0];
-        // O input type="time" precisa de 0 na frente caso seja hora unitária (ex: 9:30 vira 09:30)
         if(horaEncontrada.length === 4) horaEncontrada = "0" + horaEncontrada; 
       }
 
-      // 2. Extração de Nomes atrelado a Baixas (Leitura Linha por Linha)
       const linhasTexto = text.split('\n');
       
       rank.forEach(jogador => {
@@ -585,16 +696,14 @@ window.processarPrintOCR = () => {
           if(regexNome.test(linha)) {
             nomesEncontrados.push(jogador.nome);
             
-            // Puxa os números soltos na MESMA LINHA onde o nome do jogador foi encontrado
             const numerosNaLinha = linha.match(/\d+/g);
             
             if(numerosNaLinha && numerosNaLinha.length > 0) {
-              // Pegamos o primeiro número solto após o nome na linha de score para tentar ser a Baixa
               killsEncontrados.push(numerosNaLinha[0]);
             } else {
               killsEncontrados.push("");
             }
-            break; // Já achou esse jogador, pula pro próximo do rank
+            break; 
           }
         }
       });
@@ -627,7 +736,7 @@ window.enviarPrintParaAdmin = async () => {
   partidasPendentes.push({
     id: Date.now(),
     enviadoPor: usuarioLogado.nome,
-    hora: hora, // Salva o horário para o Admin ver
+    hora: hora, 
     imagem: printAtualBase64,
     jogadores: dadosJogadores
   });
