@@ -410,10 +410,23 @@ window.removerAprovado=async(email)=>{
  await salvar();
 };
 
-window.removerDoRank=async(nome)=>{
-  if(!confirm(`Tem certeza que deseja remover ${nome} do Rank?`)) return;
+window.removerApenasDoRank = async (nome) => {
+  if(!confirm(`Remover ${nome} apenas do Rank? (Ele continuará na lista de Aprovados)`)) return;
   rank = rank.filter(p => p.nome !== nome);
-  aprovados = aprovados.filter(p => p.nome !== nome);
+  await salvar();
+};
+
+window.adicionarAoRank = async (nome) => {
+  if(!confirm(`Adicionar ${nome} de volta ao Rank?`)) return;
+  if(!rank.find(p => p.nome === nome)) {
+    rank.push({nome: nome, matches: 0, kills: 0});
+    await salvar();
+  }
+};
+
+window.removerDoRank=async(nome)=>{
+  if(!confirm(`Remover ${nome} apenas do Rank? (Ele continuará na lista de Aprovados)`)) return;
+  rank = rank.filter(p => p.nome !== nome);
   await salvar();
 };
 
@@ -620,6 +633,14 @@ listaEspera.innerHTML="";
  listaAprovados.innerHTML="";
  aprovados.forEach(p=>{
   const id = `dados_${p.email.replace(/[^a-zA-Z0-9]/g,'')}`;
+  
+  // Verifica se o soldado está atualmente no rank
+  const estaNoRank = rank.some(r => r.nome === p.nome);
+  
+  // Define o botão com a mesma cor (blue-600) e tamanho (flex-1) do 'Ver dados'
+  const btnRankAcao = estaNoRank
+    ? `<button onclick="removerApenasDoRank('${p.nome}')" class="bg-blue-600 flex-1 py-1.5 text-xs rounded font-bold uppercase">Rem Rank</button>`
+    : `<button onclick="adicionarAoRank('${p.nome}')" class="bg-blue-600 flex-1 py-1.5 text-xs rounded font-bold uppercase">Add Rank</button>`;
 
   listaAprovados.innerHTML+=`
   <div class="bg-black p-3 rounded border border-zinc-800 flex flex-col justify-between">
@@ -628,10 +649,7 @@ listaEspera.innerHTML="";
         ${p.fotoPerfil ? `<img src="${p.fotoPerfil}" class="w-14 h-14 object-cover rounded border border-zinc-600 cursor-pointer" title="Ver perfil" onclick="window.open('${p.fotoPerfil}', '_blank')">` : `<div class="w-14 h-14 bg-zinc-800 rounded border border-red-900 flex items-center justify-center text-[10px] text-red-500 text-center leading-tight">Sem<br>Foto</div>`}
         <div>
             <strong class="text-zinc-400 text-[10px] uppercase tracking-wider">Soldado</strong><br>
-            <span class="text-sm font-bold text-zinc-200">
-                ${p.nome} 
-                ${p.emailVerificado ? '<span class="text-green-500 ml-1" title="Conta Verificada">✔</span>' : ''}
-            </span>
+            <span class="text-sm font-bold text-zinc-200">${p.nome}</span>
         </div>
     </div>
 
@@ -639,7 +657,7 @@ listaEspera.innerHTML="";
       Dados ocultos
     </div>
 
-    <div class="flex gap-2 mt-auto">
+    <div class="flex flex-wrap gap-2 mt-auto">
         <button onclick="
         const el = document.getElementById('${id}');
         if(el.textContent.includes('ocultos')){
@@ -657,10 +675,11 @@ listaEspera.innerHTML="";
         class="bg-red-600 px-3 py-1.5 text-xs rounded font-bold uppercase">
         Del
         </button>
+        
+        ${btnRankAcao}
     </div>
   </div>`;
  });
-
  contagemAprovados.textContent = aprovados.length;
 
  if(document.getElementById('listaPendentes')) {
