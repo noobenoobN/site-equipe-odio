@@ -425,8 +425,9 @@ window.adicionarAoRank = async (nome) => {
 };
 
 window.removerDoRank=async(nome)=>{
-  if(!confirm(`Remover ${nome} apenas do Rank? (Ele continuará na lista de Aprovados)`)) return;
+  if(!confirm(`Tem certeza que deseja remover ${nome} do Rank?`)) return;
   rank = rank.filter(p => p.nome !== nome);
+  aprovados = aprovados.filter(p => p.nome !== nome);
   await salvar();
 };
 
