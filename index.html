@@ -593,19 +593,25 @@ function renderTudo(){
  }
 
  listaEspera.innerHTML="";
- espera.forEach(p=>{
-  listaEspera.innerHTML+=`
-  <div class="bg-black p-3 rounded border border-zinc-800 flex flex-col gap-3">
-    <div class="flex justify-between items-center">
-      <span class="text-sm font-bold text-zinc-300">${p.nome}</span>
-      <div class="flex gap-2">
-        <button onclick="aprovar(${p.id})" class="bg-green-600 h-8 w-8 flex items-center justify-center rounded text-sm font-bold">✔</button>
-        <button onclick="reprovar(${p.id})" class="bg-red-600 h-8 w-8 flex items-center justify-center rounded text-sm font-bold">X</button>
-      </div>
-    </div>
-    ${p.fotoPerfil ? `<img src="${p.fotoPerfil}" class="w-full h-32 object-cover rounded border border-zinc-700 cursor-pointer" title="Clique para expandir" onclick="window.open('${p.fotoPerfil}', '_blank')">` : '<div class="w-full h-32 bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xs text-red-500 rounded">Membro Antigo (Sem foto)</div>'}
-  </div>`;
- });
+ listaEspera.innerHTML="";
+listaEspera.innerHTML="";
+ espera.forEach(p=>{
+  listaEspera.innerHTML+=`
+  <div class="bg-black p-4 rounded border border-zinc-800 flex flex-col gap-3">
+    <div class="flex justify-between items-start">
+      <div class="flex flex-col gap-1">
+        <span class="text-base md:text-lg font-bold text-zinc-400">Nome: <span class="text-white">${p.nome}</span></span>
+        <span class="text-sm md:text-base font-bold text-zinc-400">Conta: <span class="text-zinc-300 font-normal">${p.email || 'N/A'}</span></span>
+        <span class="text-sm md:text-base font-bold text-zinc-400">Telefone: <span class="text-zinc-300 font-normal">${p.fone || 'N/A'}</span></span>
+      </div>
+      <div class="flex gap-2 mt-1">
+        <button onclick="aprovar(${p.id})" class="bg-green-600 h-10 w-10 flex items-center justify-center rounded text-base font-bold">✔</button>
+        <button onclick="reprovar(${p.id})" class="bg-red-600 h-10 w-10 flex items-center justify-center rounded text-base font-bold">X</button>
+      </div>
+    </div>
+    ${p.fotoPerfil ? `<img src="${p.fotoPerfil}" class="w-full h-40 object-cover rounded border border-zinc-700 cursor-pointer" title="Clique para expandir" onclick="window.open('${p.fotoPerfil}', '_blank')">` : '<div class="w-full h-40 bg-zinc-900 border border-zinc-800 flex items-center justify-center text-sm text-red-500 rounded font-bold">Sem foto</div>'}
+  </div>`;
+ });
 
  listaAprovados.innerHTML="";
  aprovados.forEach(p=>{
