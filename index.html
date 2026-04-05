@@ -138,27 +138,13 @@ Lista de Aprovados (<span id="contagemAprovados"></span>)
     <button onclick="resetarSquads()" class="bg-red-600 px-4 py-2 rounded text-xs w-full sm:w-auto font-bold uppercase">
     Resetar Squad
     </button>
-    
 </div>
 <div id="equipesContainer" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
-<div class="admin-only flex flex-col md:flex-row justify-between items-center bg-zinc-900 p-3 md:p-4 border-t border-l border-r border-zinc-800 rounded-t gap-4">
-    <div class="flex items-center gap-3 w-full md:w-auto">
-        <label class="text-xs font-bold text-zinc-400 uppercase">Ordenar Rank:</label>
-        <select id="selectOrdemRank" onchange="renderTudo()" class="bg-black text-white text-xs p-2 rounded border border-zinc-700 flex-1 md:flex-none cursor-pointer outline-none">
-            <option value="chegada">Padrão (Chegada)</option>
-            <option value="sorteio">Sorteio Atual (Squads)</option>
-        </select>
-    </div>
-    <button onclick="zerarRankGeral()" class="bg-red-900 hover:bg-red-800 border border-red-700 px-4 py-2 rounded text-xs font-bold uppercase w-full md:w-auto transition-colors">
-        Zerar Rank Geral
-    </button>
-</div>
 
 </div>
 </section>
 
-
-<div class="bg-zinc-900 rounded-b border border-zinc-800 overflow-x-auto">
+<div class="bg-zinc-900 rounded border border-zinc-800 overflow-x-auto">
 <table class="w-full text-left min-w-[500px]">
 <thead class="bg-black text-zinc-500 text-xs uppercase">
 <tr>
@@ -424,44 +410,10 @@ window.removerAprovado=async(email)=>{
  await salvar();
 };
 
-// --- NOVAS FUNÇÕES EXCLUSIVAS DE ADMIN PARA O RANK ---
-window.toggleRank = async (nome) => {
-    const indexNoRank = rank.findIndex(p => p.nome === nome);
-    if(indexNoRank > -1) {
-        if(!confirm(`Deseja REMOVER ${nome} do Rank? Ele(a) continuará na lista de aprovados.`)) return;
-        rank.splice(indexNoRank, 1);
-        await salvar();
-    } else {
-        if(!confirm(`Deseja ADICIONAR ${nome} de volta ao Rank?`)) return;
-        rank.push({nome: nome, matches: 0, kills: 0});
-        await salvar();
-    }
-};
-
-window.zerarRankGeral = async () => {
-    if(!confirm("CUIDADO: Você está prestes a zerar as Partidas e Kills de TODOS os jogadores do Rank. Deseja continuar?")) return;
-    if(!confirm("Tem certeza absoluta? Esta ação não pode ser desfeita.")) return;
-    
-    rank = rank.map(jogador => ({ ...jogador, matches: 0, kills: 0 }));
-    await salvar();
-    alert("Rank geral zerado com sucesso!");
-};
-
-window.addMatch = async (nome) => {
-    const i = rank.findIndex(p => p.nome === nome);
-    if(i > -1) {
-        const v = parseInt(prompt(`Adicionar Partidas para ${nome}:`, "1")) || 0;
-        if(v > 0) {
-            rank[i].matches += v;
-            await salvar();
-        }
-    }
-};
-// --------------------------------------------------------
-
 window.removerDoRank=async(nome)=>{
-  if(!confirm(`Tem certeza que deseja remover ${nome} do Rank? Ele não será apagado do sistema, apenas sairá da tabela.`)) return;
+  if(!confirm(`Tem certeza que deseja remover ${nome} do Rank?`)) return;
   rank = rank.filter(p => p.nome !== nome);
+  aprovados = aprovados.filter(p => p.nome !== nome);
   await salvar();
 };
 
@@ -552,29 +504,9 @@ window.atualizarFotoMembro = async () => {
   });
 };
 
-window.renderTudo = renderTudo; // <--- ADICIONE ESTA LINHA AQUI
-
 function renderTudo(){
- // APLICAÇÃO DO FILTRO DE ORDENAÇÃO DO RANK
- let rankExibicao = [...rank];
- const selectOrdem = document.getElementById('selectOrdemRank'); 
- 
- if (selectOrdem && selectOrdem.value === 'sorteio') {
-    rankExibicao.sort((a, b) => {
-        let squadA = equipesSorteadas.findIndex(eq => eq.membros.includes(a.nome));
-        let squadB = equipesSorteadas.findIndex(eq => eq.membros.includes(b.nome));
-        
-        // Se não estiver no sorteio, joga para o final
-        if (squadA === -1) squadA = 999;
-        if (squadB === -1) squadB = 999;
-        
-        if (squadA !== squadB) return squadA - squadB;
-        return 0; // Se for do mesmo squad, mantém a ordem original entre eles
-    });
- }
-
  rankBody.innerHTML="";
- rankExibicao.forEach((p,i)=>{
+ rank.forEach((p,i)=>{
   // Busca as informações completas do usuário em 'aprovados' para puxar a foto
   const objAprovado = aprovados.find(a => a.nome === p.nome);
   const avatarHtml = objAprovado && objAprovado.fotoPerfil 
@@ -596,14 +528,11 @@ function renderTudo(){
    <td class="p-3 md:p-4 text-center">${p.matches||0}</td>
    <td class="p-3 md:p-4 text-center text-red-500 font-bold">${p.kills||0}</td>
    <td class="admin-only p-3 md:p-4 text-right">
-    <div class="flex justify-end gap-1 sm:gap-2">
-        <button onclick="addMatch('${p.nome}')" class="bg-green-600 px-2 py-1 text-[10px] sm:text-xs rounded font-bold" title="Adicionar Partida/Vitória Individual">
-        +V
-        </button>
-        <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-2 py-1 text-[10px] sm:text-xs rounded font-bold" title="Adicionar Kills">
+    <div class="flex justify-end gap-2">
+        <button onclick="addScore('${p.nome}')" class="bg-blue-600 px-3 py-1 text-xs rounded font-bold">
         +K
         </button>
-        <button onclick="removerDoRank('${p.nome}')" class="bg-red-600 px-2 py-1 text-[10px] sm:text-xs rounded font-bold" title="Remover do Rank">
+        <button onclick="removerDoRank('${p.nome}')" class="bg-red-600 px-3 py-1 text-xs rounded font-bold">
         Del
         </button>
     </div>
@@ -691,7 +620,6 @@ listaEspera.innerHTML="";
  listaAprovados.innerHTML="";
  aprovados.forEach(p=>{
   const id = `dados_${p.email.replace(/[^a-zA-Z0-9]/g,'')}`;
-  const isNoRank = rank.some(r => r.nome === p.nome);
 
   listaAprovados.innerHTML+=`
   <div class="bg-black p-3 rounded border border-zinc-800 flex flex-col justify-between">
@@ -700,10 +628,7 @@ listaEspera.innerHTML="";
         ${p.fotoPerfil ? `<img src="${p.fotoPerfil}" class="w-14 h-14 object-cover rounded border border-zinc-600 cursor-pointer" title="Ver perfil" onclick="window.open('${p.fotoPerfil}', '_blank')">` : `<div class="w-14 h-14 bg-zinc-800 rounded border border-red-900 flex items-center justify-center text-[10px] text-red-500 text-center leading-tight">Sem<br>Foto</div>`}
         <div>
             <strong class="text-zinc-400 text-[10px] uppercase tracking-wider">Soldado</strong><br>
-            <span class="text-sm font-bold text-zinc-200">
-                ${p.nome} 
-                ${p.emailVerificado ? '<span class="text-green-500 ml-1" title="Conta Verificada">✔</span>' : ''}
-            </span>
+            <span class="text-sm font-bold text-zinc-200">${p.nome}</span>
         </div>
     </div>
 
@@ -711,29 +636,23 @@ listaEspera.innerHTML="";
       Dados ocultos
     </div>
 
-    <div class="flex flex-col gap-2 mt-auto">
-        <div class="flex gap-2">
-            <button onclick="
-            const el = document.getElementById('${id}');
-            if(el.textContent.includes('ocultos')){
-                el.innerHTML = '<span class=\\'text-zinc-400\\'>Email:</span> ${p.email}<br><span class=\\'text-zinc-400\\'>Fone:</span> ${p.fone}';
-                this.textContent = 'Ocultar';
-            } else {
-                el.textContent = 'Dados ocultos';
-                this.textContent = 'Ver dados';
-            }
-            " class="bg-blue-600 flex-1 py-1.5 text-xs rounded font-bold uppercase">
-            Ver dados
-            </button>
+    <div class="flex gap-2 mt-auto">
+        <button onclick="
+        const el = document.getElementById('${id}');
+        if(el.textContent.includes('ocultos')){
+            el.innerHTML = '<span class=\\'text-zinc-400\\'>Email:</span> ${p.email}<br><span class=\\'text-zinc-400\\'>Fone:</span> ${p.fone}';
+            this.textContent = 'Ocultar';
+        } else {
+            el.textContent = 'Dados ocultos';
+            this.textContent = 'Ver dados';
+        }
+        " class="bg-blue-600 flex-1 py-1.5 text-xs rounded font-bold uppercase">
+        Ver dados
+        </button>
 
-            <button onclick="removerAprovado('${p.email}')"
-            class="bg-red-600 px-3 py-1.5 text-xs rounded font-bold uppercase">
-            Del
-            </button>
-        </div>
-        
-        <button onclick="toggleRank('${p.nome}')" class="${isNoRank ? 'bg-orange-600 hover:bg-orange-500 text-white' : 'bg-green-600 hover:bg-green-500 text-white'} w-full py-1.5 text-xs rounded font-bold uppercase transition-colors">
-            ${isNoRank ? 'Remover do Rank' : 'Adicionar ao Rank'}
+        <button onclick="removerAprovado('${p.email}')"
+        class="bg-red-600 px-3 py-1.5 text-xs rounded font-bold uppercase">
+        Del
         </button>
     </div>
   </div>`;
