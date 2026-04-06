@@ -420,7 +420,7 @@ window.adicionarAoRank = async (nome) => {
   if(!confirm(`Adicionar ${nome} de volta ao Rank?`)) return;
   if(!rank.find(p => p.nome === nome)) {
     rank.push({nome: nome, matches: 0, kills: 0});
-    await salvar();
+    await salvar(); 
   }
 };
 
@@ -649,7 +649,9 @@ listaEspera.innerHTML="";
         ${p.fotoPerfil ? `<img src="${p.fotoPerfil}" class="w-14 h-14 object-cover rounded border border-zinc-600 cursor-pointer" title="Ver perfil" onclick="window.open('${p.fotoPerfil}', '_blank')">` : `<div class="w-14 h-14 bg-zinc-800 rounded border border-red-900 flex items-center justify-center text-[10px] text-red-500 text-center leading-tight">Sem<br>Foto</div>`}
         <div>
             <strong class="text-zinc-400 text-[10px] uppercase tracking-wider">Soldado</strong><br>
-            <span class="text-sm font-bold text-zinc-200">${p.nome}</span>
+            <span class="text-sm font-bold text-zinc-200">${p.nome}
+               ${p.emailVerificado ? '<span class="text-green-500 ml-1" title="Conta Verificada">✔</span>' : ''}
+              </span>
         </div>
     </div>
 
