@@ -365,73 +365,69 @@ window.abrirModal=()=>modalCadastro.classList.remove("hidden");
 window.fecharModal=()=>modalCadastro.classList.add("hidden");
 
 window.solicitarEntrada = async () => {
-  const nome = regNome.value.trim();
-  const email = regEmail.value.trim().toLowerCase();
-  const fone = regFone.value.trim();
-  const fotoFile = document.getElementById('regFoto').files[0];
+    const nome = regNome.value.trim();
+    const email = regEmail.value.trim().toLowerCase();
+    const fone = regFone.value.trim();
+    const fotoFile = document.getElementById('regFoto').files[0];
 
-  if (!nome || !email || !fone) return alert("Preencha todos os campos de texto!");
-  if (!fotoFile) return alert("É obrigatório enviar a foto ou print do seu perfil!");
+    if (!nome || !email || !fone) return alert("Preencha todos os campos!");
+    if (!fotoFile) return alert("Envie a foto do perfil!");
 
-  // Validações Anti-Duplicidade
-  const emailNaEspera = espera.find(p => p.email && p.email.toLowerCase() === email);
-  const emailAprovado = aprovados.find(p => p.email && p.email.toLowerCase() === email);
-  if (emailNaEspera) return alert("AVISO: Este email já está na fila de alistamento!");
-  if (emailAprovado) return alert("AVISO: Este email já é de um soldado aprovado!");
+    // --- NOVA LOGICA DE VERIFICAÇÃO (MAIS SEGURA) ---
+    const verificarDuplicado = (lista) => {
+        return lista.find(p => {
+            const emailExiste = p.email && p.email.toLowerCase() === email;
+            const nomeExiste = p.nome && p.nome.toLowerCase() === nome.toLowerCase();
+            return emailExiste || nomeExiste;
+        });
+    };
 
-  const nomeLower = nome.toLowerCase();
-  const nomeNaEspera = espera.find(p => p.nome && p.nome.toLowerCase() === nomeLower);
-  const nomeAprovado = aprovados.find(p => p.nome && p.nome.toLowerCase() === nomeLower);
-  if (nomeNaEspera) return alert("Este nome já está na fila de alistamento!");
-  if (nomeAprovado) return alert("Este nome já pertence a um soldado aprovado!");
-
-  // Trava o botão para evitar cliques duplos
-  const btnSubmit = document.querySelector('button[onclick="solicitarEntrada()"]');
-  let textoOriginal = "Enviar Alistamento";
-  if (btnSubmit) {
-    textoOriginal = btnSubmit.innerText;
-    btnSubmit.disabled = true;
-    btnSubmit.innerText = "ENVIANDO ALISTAMENTO...";
-  }
-
-  comprimirImagem(fotoFile, async (base64Foto) => {
-    try {
-      // 1. Salva no banco de dados (Firebase)
-      espera.push({ nome, email, fone, fotoPerfil: base64Foto, id: Date.now() });
-      await salvar();
-
-      // 2. Dispara o Email via EmailJS
-      // ATENÇÃO: Substitua "SEU_SERVICE_ID" e "SEU_TEMPLATE_ID" pelos seus códigos do EmailJS!
-      // Se você tinha variáveis diferentes (como from_name, message, etc), pode ajustar aqui embaixo.
-      await emailjs.send("SEU_SERVICE_ID", "SEU_TEMPLATE_ID", {
-        nome: nome,
-        email: email,
-        telefone: fone
-      });
-
-      // Se tudo der certo, avisa o recruta
-      alert("Alistamento enviado com sucesso! Aguarde a aprovação do Admin.");
-
-      // Limpa os campos
-      regNome.value = '';
-      regEmail.value = '';
-      regFone.value = '';
-      document.getElementById('regFoto').value = '';
-      fecharModal();
-
-    } catch (erro) {
-      // Se der erro no Firebase ou no EmailJS, ele avisa na tela e não congela
-      console.error("Erro no envio:", erro);
-      alert("Erro ao enviar! Detalhes do erro: " + erro.message);
-    } finally {
-      // Destrava o botão aconteça o que acontecer (seja sucesso ou erro)
-      if (btnSubmit) {
-        btnSubmit.disabled = false;
-        btnSubmit.innerText = textoOriginal;
-      }
+    if (verificarDuplicado(espera) || verificarDuplicado(aprovados)) {
+        return alert("Este nome ou email já está cadastrado ou aguardando aprovação!");
     }
-  });
+    // ------------------------------------------------
+
+    const btnSubmit = document.querySelector('button[onclick="solicitarEntrada()"]');
+    if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerText = "PROCESSANDO..."; }
+
+    try {
+        comprimirImagem(fotoFile, async (base64Foto) => {
+            try {
+                // 1. Salva no Firebase primeiro
+                const novoRecruta = { nome, email, fone, fotoPerfil: base64Foto, id: Date.now() };
+                espera.push(novoRecruta);
+                await salvar();
+
+                // 2. Tenta enviar o email, mas não trava se o email falhar
+                try {
+                    await emailjs.send("service_fivq65r", "template_w8w63cs", {
+                        from_name: nome,
+                        message: `Novo recruta: ${nome} - Fone: ${fone}`,
+                        reply_to: email
+                    });
+                } catch (mailErr) {
+                    console.warn("O cadastro foi salvo, mas o aviso por email falhou:", mailErr);
+                }
+
+                alert("Alistamento enviado! Agora é só aguardar o Admin.");
+                fecharModal();
+                
+                // Limpa campos
+                regNome.value = ''; regEmail.value = ''; regFone.value = '';
+                document.getElementById('regFoto').value = '';
+
+            } catch (err) {
+                alert("Erro ao salvar no banco: " + err.message);
+            } finally {
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerText = "Enviar Alistamento"; }
+            }
+        });
+    } catch (e) {
+        alert("Erro na imagem. Tente outro arquivo.");
+        if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerText = "Enviar Alistamento"; }
+    }
 };
+
 
 window.aprovar=async(id)=>{
  const i=espera.findIndex(p=>p.id===id);
