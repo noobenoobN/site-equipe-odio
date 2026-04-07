@@ -400,7 +400,7 @@ function comprimirImagem(file, callback) {
     img.onload = () => {
       const canvas = document.createElement('canvas');
       // Reduza de 800 para 400 ou 500 para economizar muito espaço
-      const MAX_WIDTH = 150; 
+      const MAX_WIDTH = 125; 
       const scaleSize = MAX_WIDTH / img.width;
       canvas.width = MAX_WIDTH;
       canvas.height = img.height * scaleSize;
@@ -408,7 +408,7 @@ function comprimirImagem(file, callback) {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       // O segundo parâmetro (0.5) é a qualidade (50%). 
       // O seu estava em 0.00001, o que é estranho, tente 0.5 ou 0.6.
-      callback(canvas.toDataURL('image/jpeg', 0.4)); 
+      callback(canvas.toDataURL('image/jpeg', 0.2)); 
     }
   }
 }
