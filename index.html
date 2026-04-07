@@ -370,63 +370,74 @@ window.solicitarEntrada = async () => {
     const fone = regFone.value.trim();
     const fotoFile = document.getElementById('regFoto').files[0];
 
-    if (!nome || !email || !fone) return alert("Preencha todos os campos!");
-    if (!fotoFile) return alert("Envie a foto do perfil!");
+    // 1. Validação básica de preenchimento
+    if (!nome || !email || !fone) return alert("Por favor, preencha todos os campos!");
+    if (!fotoFile) return alert("Você precisa anexar a foto do perfil!");
 
-    // --- NOVA LOGICA DE VERIFICAÇÃO (MAIS SEGURA) ---
-    const verificarDuplicado = (lista) => {
+    // 2. Verificação de Duplicados (Lógica Blindada)
+    // Procuramos apenas por textos que batem exatamente, ignorando campos vazios no banco
+    const encontrarConflito = (lista) => {
         return lista.find(p => {
-            const emailExiste = p.email && p.email.toLowerCase() === email;
-            const nomeExiste = p.nome && p.nome.toLowerCase() === nome.toLowerCase();
-            return emailExiste || nomeExiste;
+            const nomeNoBanco = (p.nome || "").toLowerCase().trim();
+            const emailNoBanco = (p.email || "").toLowerCase().trim();
+            return (nomeNoBanco === nome.toLowerCase() || emailNoBanco === email);
         });
     };
 
-    if (verificarDuplicado(espera) || verificarDuplicado(aprovados)) {
-        return alert("Este nome ou email já está cadastrado ou aguardando aprovação!");
+    if (encontrarConflito(espera) || encontrarConflito(aprovados)) {
+        return alert("Este nome de soldado ou e-mail já está cadastrado ou aguardando aprovação!");
     }
-    // ------------------------------------------------
 
+    // 3. Preparação do Botão
     const btnSubmit = document.querySelector('button[onclick="solicitarEntrada()"]');
-    if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerText = "PROCESSANDO..."; }
+    if (btnSubmit) { 
+        btnSubmit.disabled = true; 
+        btnSubmit.innerText = "ENVIANDO AGUARDE..."; 
+    }
 
     try {
         comprimirImagem(fotoFile, async (base64Foto) => {
             try {
-                // 1. Salva no Firebase primeiro
-                const novoRecruta = { nome, email, fone, fotoPerfil: base64Foto, id: Date.now() };
-                espera.push(novoRecruta);
+                // Salva no Banco
+                espera.push({ nome, email, fone, fotoPerfil: base64Foto, id: Date.now() });
                 await salvar();
 
-                // 2. Tenta enviar o email, mas não trava se o email falhar
+                // Envia Email (usando seus IDs service_fivq65r e template_w8w63cs)
                 try {
                     await emailjs.send("service_fivq65r", "template_w8w63cs", {
                         from_name: nome,
-                        message: `Novo recruta: ${nome} - Fone: ${fone}`,
+                        message: `Solicitação de entrada: ${nome} - Tel: ${fone}`,
                         reply_to: email
                     });
-                } catch (mailErr) {
-                    console.warn("O cadastro foi salvo, mas o aviso por email falhou:", mailErr);
+                } catch (eMail) {
+                    console.log("Erro ao disparar email de aviso, mas o cadastro foi salvo.");
                 }
 
-                alert("Alistamento enviado! Agora é só aguardar o Admin.");
+                alert("Alistamento enviado com sucesso! O Admin analisará seu perfil.");
                 fecharModal();
                 
-                // Limpa campos
+                // Limpa o formulário
                 regNome.value = ''; regEmail.value = ''; regFone.value = '';
                 document.getElementById('regFoto').value = '';
 
             } catch (err) {
-                alert("Erro ao salvar no banco: " + err.message);
+                alert("Erro ao salvar dados: " + err.message);
             } finally {
-                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerText = "Enviar Alistamento"; }
+                if (btnSubmit) { 
+                    btnSubmit.disabled = false; 
+                    btnSubmit.innerText = "Enviar Alistamento"; 
+                }
             }
         });
-    } catch (e) {
-        alert("Erro na imagem. Tente outro arquivo.");
-        if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerText = "Enviar Alistamento"; }
+    } catch (errImg) {
+        alert("Erro ao processar a imagem.");
+        if (btnSubmit) { 
+            btnSubmit.disabled = false; 
+            btnSubmit.innerText = "Enviar Alistamento"; 
+        }
     }
 };
+
 
 
 window.aprovar=async(id)=>{
