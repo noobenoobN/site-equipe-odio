@@ -57,6 +57,18 @@ Sair
 <main class="max-w-6xl mx-auto p-4 mt-4 md:mt-8 space-y-8 md:space-y-10">
 
 <section class="membro-only space-y-6">
+  <div class="bg-zinc-900 p-4 md:p-6 rounded border border-yellow-600 flex flex-col md:flex-row md:items-center justify-between gap-4 mt-4">
+    <div>
+        <h3 class="text-yellow-500 font-bold uppercase mb-1">Alterar Nome de Guerra</h3>
+        <p class="text-xs text-zinc-500">Mude seu nome exibido no Rank e nos Squads.</p>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+        <input type="text" id="novoNomeSoldado" placeholder="Novo nome no jogo" class="bg-black border border-zinc-700 p-2 text-white text-sm rounded w-full sm:w-auto">
+        <button onclick="alterarNomeMembro()" class="bg-yellow-600 px-4 py-2 rounded text-xs font-bold uppercase w-full sm:w-auto hover:bg-yellow-500 text-black">
+            Salvar Nome
+        </button>
+    </div>
+</div>
 <div id="avisoFotoMembro" class="bg-red-900/50 p-4 rounded border-2 border-red-600 text-center hidden">
     <p class="text-red-400 font-bold text-sm uppercase">Aviso: Você ainda não enviou sua foto de perfil do COD!</p>
     <p class="text-xs text-zinc-300 mt-1">Por favor, atualize sua foto de perfil no quadro abaixo para regularizar seu cadastro.</p>
@@ -586,6 +598,56 @@ window.atualizarFotoMembro = async () => {
           alert("Sua foto de perfil foi atualizada com sucesso!");
       }
   });
+};
+
+window.alterarNomeMembro = async () => {
+    const novoNome = document.getElementById('novoNomeSoldado').value.trim();
+    
+    // Validações básicas
+    if (!usuarioLogado) return alert("Você precisa estar logado!");
+    if (!novoNome) return alert("Digite um novo nome!");
+    if (novoNome.length < 3) return alert("Nome muito curto!");
+
+    // 1. Verificar se o nome já existe para outro soldado
+    const nomeExiste = aprovados.find(p => p.nome.toLowerCase() === novoNome.toLowerCase()) || 
+                       espera.find(p => p.nome.toLowerCase() === novoNome.toLowerCase());
+    
+    if (nomeExiste) return alert("Este nome já está sendo usado por outro soldado!");
+
+    if (!confirm(`Deseja alterar seu nome de "${usuarioLogado.nome}" para "${novoNome}"?`)) return;
+
+    const nomeAntigo = usuarioLogado.nome;
+
+    // 2. Atualizar na lista de Aprovados
+    const idxAprovado = aprovados.findIndex(p => p.email === usuarioLogado.email);
+    if (idxAprovado > -1) {
+        aprovados[idxAprovado].nome = novoNome;
+    }
+
+    // 3. Atualizar no Rank
+    const idxRank = rank.findIndex(p => p.nome === nomeAntigo);
+    if (idxRank > -1) {
+        rank[idxRank].nome = novoNome;
+    }
+
+    // 4. Atualizar nos Squads Sorteados (para não quebrar o time atual)
+    equipesSorteadas.forEach(eq => {
+        const i = eq.membros.indexOf(nomeAntigo);
+        if (i !== -1) eq.membros[i] = novoNome;
+    });
+
+    // 5. Atualizar objeto da sessão local
+    usuarioLogado.nome = novoNome;
+    document.getElementById('nomeMembroLogado').textContent = `Soldado ${novoNome}`;
+
+    // 6. Salvar tudo no Firebase
+    try {
+        await salvar();
+        document.getElementById('novoNomeSoldado').value = "";
+        alert("Nome alterado com sucesso em todo o sistema!");
+    } catch (err) {
+        alert("Erro ao salvar novo nome: " + err.message);
+    }
 };
 
 function renderTudo(){
