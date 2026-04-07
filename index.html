@@ -57,15 +57,15 @@ Sair
 <main class="max-w-6xl mx-auto p-4 mt-4 md:mt-8 space-y-8 md:space-y-10">
 
 <section class="membro-only space-y-6">
-  <div class="bg-zinc-900 p-4 md:p-6 rounded border border-yellow-600 flex flex-col md:flex-row md:items-center justify-between gap-4 mt-4">
+<div class="bg-zinc-900 p-4 md:p-6 rounded border border-yellow-600 flex flex-col md:flex-row md:items-center justify-between gap-4 mt-4">
     <div>
-        <h3 class="text-yellow-500 font-bold uppercase mb-1">Alterar Nome de Guerra</h3>
-        <p class="text-xs text-zinc-500">Mude seu nome exibido no Rank e nos Squads.</p>
+        <h3 class="text-yellow-500 font-bold uppercase mb-1">Solicitar Troca de Nome</h3>
+        <p class="text-xs text-zinc-500">Sua solicitação será enviada para aprovação do Admin.</p>
     </div>
     <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-        <input type="text" id="novoNomeSoldado" placeholder="Novo nome no jogo" class="bg-black border border-zinc-700 p-2 text-white text-sm rounded w-full sm:w-auto">
-        <button onclick="alterarNomeMembro()" class="bg-yellow-600 px-4 py-2 rounded text-xs font-bold uppercase w-full sm:w-auto hover:bg-yellow-500 text-black">
-            Salvar Nome
+        <input type="text" id="novoNomeInput" placeholder="Novo nome desejado" class="bg-black border border-zinc-700 p-2 text-white text-sm rounded w-full sm:w-auto">
+        <button onclick="solicitarTrocaNome()" class="bg-yellow-600 px-4 py-2 rounded text-xs font-bold uppercase w-full sm:w-auto hover:bg-yellow-500 text-black">
+            Pedir Troca
         </button>
     </div>
 </div>
@@ -109,6 +109,11 @@ Sair
 <div class="bg-zinc-900 p-4 md:p-6 rounded border-2 border-yellow-600">
 
 <h3 class="text-yellow-500 font-bold uppercase mb-3">Revisão de Prints (<span id="contagemPendentes">0</span>)</h3>
+<div class="bg-zinc-900 p-4 md:p-6 rounded border-2 border-orange-600 mt-6">
+    <h3 class="text-orange-500 font-bold uppercase mb-3">Pedidos de Troca de Nome (<span id="contagemTrocaNome">0</span>)</h3>
+    <div id="listaPedidosNome" class="space-y-3">
+        </div>
+</div>
 <div id="listaPendentes" class="space-y-4 mb-6"></div>
 <hr class="my-4 border-zinc-700">
 
@@ -282,7 +287,76 @@ let bannerAtual="";
 let usuarioLogado = null;
 let printAtualBase64 = null;
 let usuarioAguardandoConfirmacao = null; 
+// Variável global para controlar os pedidos (adicione onde estão as outras listas)
+let pedidosNome = [];
 
+// Atualize o onSnapshot para ler 'pedidosNome' do Firebase
+onSnapshot(docRef, s => {
+    if(!s.exists()) return;
+    const d = s.data();
+    // ... suas outras variáveis ...
+    pedidosNome = d.pedidosNome || [];
+    renderTudo(); // Certifique-se de que renderTudo processe a nova lista
+});
+
+// 1. FUNÇÃO DO SOLDADO: Enviar o pedido
+window.solicitarTrocaNome = async () => {
+    const novoNome = document.getElementById('novoNomeInput').value.trim();
+    if(!usuarioLogado) return alert("Logue primeiro!");
+    if(!novoNome || novoNome.length < 3) return alert("Nome inválido!");
+
+    // Verifica se já existe esse nome
+    if(aprovados.find(p => p.nome.toLowerCase() === novoNome.toLowerCase())) {
+        return alert("Este nome já existe na equipe!");
+    }
+
+    const pedido = {
+        id: Date.now(),
+        email: usuarioLogado.email,
+        nomeAntigo: usuarioLogado.nome,
+        nomeNovo: novoNome
+    };
+
+    pedidosNome.push(pedido);
+    await setDoc(docRef, { pedidosNome }, { merge: true });
+    
+    alert("Solicitação enviada! Aguarde a aprovação do Admin.");
+    document.getElementById('novoNomeInput').value = "";
+};
+
+// 2. FUNÇÃO DO ADMIN: Aprovar a troca (Executa a mudança real)
+window.aprovarTrocaNome = async (id) => {
+    const idx = pedidosNome.findIndex(p => p.id === id);
+    if(idx === -1) return;
+    
+    const p = pedidosNome[idx];
+
+    // Atualiza na lista de Aprovados
+    const iAprov = aprovados.findIndex(a => a.email === p.email);
+    if(iAprov > -1) aprovados[iAprov].nome = p.nomeNovo;
+
+    // Atualiza no Rank
+    const iRank = rank.findIndex(r => r.nome === p.nomeAntigo);
+    if(iRank > -1) rank[iRank].nome = p.nomeNovo;
+
+    // Atualiza nos Squads Sorteados
+    equipesSorteadas.forEach(eq => {
+        const iS = eq.membros.indexOf(p.nomeAntigo);
+        if(iS !== -1) eq.membros[iS] = p.nomeNovo;
+    });
+
+    // Remove o pedido da lista
+    pedidosNome.splice(idx, 1);
+
+    await salvar(); // Salva todas as listas atualizadas
+    alert("Nome alterado com sucesso!");
+};
+
+window.rejeitarTrocaNome = async (id) => {
+    pedidosNome = pedidosNome.filter(p => p.id !== id);
+    await setDoc(docRef, { pedidosNome }, { merge: true });
+    alert("Pedido recusado.");
+};
 const snap = await getDoc(docRef);
 if(!snap.exists()){
  await setDoc(docRef,{rank:[],espera:[],aprovados:[], partidasPendentes:[], equipesSorteadas:[]}); 
@@ -653,6 +727,27 @@ window.alterarNomeMembro = async () => {
 function renderTudo(){
  rankBody.innerHTML="";
  rank.forEach((p,i)=>{
+  // Renderizar Pedidos de Nome no Painel Admin
+const listaPedidosNome = document.getElementById('listaPedidosNome');
+const contagemTrocaNome = document.getElementById('contagemTrocaNome');
+
+if(listaPedidosNome) {
+    contagemTrocaNome.textContent = pedidosNome.length;
+    listaPedidosNome.innerHTML = "";
+    pedidosNome.forEach(p => {
+        listaPedidosNome.innerHTML += `
+        <div class="bg-black p-3 rounded border border-orange-800 flex justify-between items-center">
+            <div class="text-xs">
+                <span class="text-zinc-500 uppercase font-bold">De:</span> <span class="text-red-500 font-bold">${p.nomeAntigo}</span><br>
+                <span class="text-zinc-500 uppercase font-bold">Para:</span> <span class="text-green-500 font-bold">${p.nomeNovo}</span>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="aprovarTrocaNome(${p.id})" class="bg-green-600 px-3 py-1 rounded text-[10px] font-bold uppercase">✔ Sim</button>
+                <button onclick="rejeitarTrocaNome(${p.id})" class="bg-red-600 px-3 py-1 rounded text-[10px] font-bold uppercase">✖ Não</button>
+            </div>
+        </div>`;
+    });
+}
   // Busca as informações completas do usuário em 'aprovados' para puxar a foto
   const objAprovado = aprovados.find(a => a.nome === p.nome);
   const avatarHtml = objAprovado && objAprovado.fotoPerfil 
