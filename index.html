@@ -366,23 +366,49 @@ window.fecharModal=()=>modalCadastro.classList.add("hidden");
 
 window.solicitarEntrada=async()=>{
  const nome=regNome.value.trim();
- const email=regEmail.value.trim();
+ const email=regEmail.value.trim().toLowerCase(); // Força minúsculas para evitar bugs
  const fone=regFone.value.trim();
  const fotoFile = document.getElementById('regFoto').files[0];
 
  if(!nome||!email||!fone) return alert("Preencha todos os campos de texto!");
  if(!fotoFile) return alert("É obrigatório enviar a foto ou print do seu perfil do Call of Duty!");
 
- const emailDuplicado = espera.find(p=>p.email===email) || aprovados.find(p=>p.email===email);
- if(emailDuplicado) return alert("Este email já está cadastrado no nosso sistema!");
+ // Validação de Email separada e à prova de erros
+ const emailNaEspera = espera.find(p => p.email && p.email.toLowerCase() === email);
+ const emailAprovado = aprovados.find(p => p.email && p.email.toLowerCase() === email);
 
- const nomeDuplicado = espera.find(p=>p.nome.toLowerCase()===nome.toLowerCase()) || aprovados.find(p=>p.nome.toLowerCase()===nome.toLowerCase());
- if(nomeDuplicado) return alert("Este nome já está sendo utilizado por outro recruta/soldado! Escolha outro.");
+ if(emailNaEspera) return alert("AVISO: Este email já está na fila de alistamento! Aguarde o Admin aprovar.");
+ if(emailAprovado) return alert("AVISO: Este email já é de um soldado aprovado! Feche e faça Login.");
+
+ // Validação de Nome separada e à prova de erros
+ const nomeLower = nome.toLowerCase();
+ const nomeNaEspera = espera.find(p => p.nome && p.nome.toLowerCase() === nomeLower);
+ const nomeAprovado = aprovados.find(p => p.nome && p.nome.toLowerCase() === nomeLower);
+
+ if(nomeNaEspera) return alert("Este nome já está na fila de alistamento! Escolha outro ou aguarde.");
+ if(nomeAprovado) return alert("Este nome já pertence a um soldado aprovado! Escolha outro.");
+
+ // Trava o botão para evitar que o recruta clique 2x e bugue o banco de dados
+ const btnSubmit = document.querySelector('button[onclick="solicitarEntrada()"]');
+ const textoOriginal = btnSubmit.innerText;
+ btnSubmit.disabled = true;
+ btnSubmit.innerText = "ENVIANDO ALISTAMENTO...";
 
  comprimirImagem(fotoFile, async (base64Foto) => {
      espera.push({nome,email,fone, fotoPerfil: base64Foto, id:Date.now()});
      await salvar();
      alert("Alistamento enviado com sucesso! Aguarde a aprovação do Admin.");
+     
+     // Limpa os campos do formulário para o próximo uso
+     regNome.value = '';
+     regEmail.value = '';
+     regFone.value = '';
+     document.getElementById('regFoto').value = '';
+     
+     // Destrava o botão
+     btnSubmit.disabled = false;
+     btnSubmit.innerText = textoOriginal;
+     
      fecharModal();
  });
 };
