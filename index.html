@@ -203,7 +203,7 @@ Lista de Aprovados (<span id="contagemAprovados"></span>)
 <h2 class="text-lg font-bold mb-2 text-center uppercase text-yellow-500">Confirme seu Email</h2>
 <p class="text-xs text-zinc-400 mb-4 text-center">Enviamos um <strong class="text-yellow-500">código de 6 dígitos</strong> para o email abaixo. Digite-o para ativar sua conta!<br><br><strong id="txtEmailConfirmacao" class="text-white text-sm"></strong></p>
 
-<input id="inputCodigoConfirmacao" placeholder="Ex: 123456" type="number" class="w-full bg-black border border-zinc-700 p-2 md:p-3 mb-4 rounded text-center text-lg text-white font-bold tracking-[em]">
+<input id="inputCodigoConfirmacao" placeholder="Ex: 123456" type="number" class="w-full bg-black border border-zinc-700 p-2 md:p-3 mb-4 rounded text-center text-lg text-white font-bold tracking-[0.3em]">
 <button id="btnValidarCodigo" onclick="validarCodigoEmail()" class="w-full bg-green-600 hover:bg-green-500 py-3 rounded font-bold uppercase text-sm mb-4">Validar Código</button>
 
 <hr class="border-zinc-700 mb-4">
@@ -313,13 +313,16 @@ function comprimirImagem(file, callback) {
     img.src = event.target.result;
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 800;
+      // Reduza de 800 para 400 ou 500 para economizar muito espaço
+      const MAX_WIDTH = 150; 
       const scaleSize = MAX_WIDTH / img.width;
       canvas.width = MAX_WIDTH;
       canvas.height = img.height * scaleSize;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      callback(canvas.toDataURL('image/jpeg', 0.001));
+      // O segundo parâmetro (0.5) é a qualidade (50%). 
+      // O seu estava em 0.00001, o que é estranho, tente 0.5 ou 0.6.
+      callback(canvas.toDataURL('image/jpeg', 0.4)); 
     }
   }
 }
@@ -363,6 +366,7 @@ window.logoutAdmin=()=>{
 
 window.abrirModal=()=>modalCadastro.classList.remove("hidden");
 window.fecharModal=()=>modalCadastro.classList.add("hidden");
+
 
 window.solicitarEntrada = async () => {
     const nome = regNome.value.trim();
@@ -477,10 +481,23 @@ window.removerAprovado=async(email)=>{
  await salvar();
 };
 
-window.removerDoRank=async(nome)=>{
-  if(!confirm(`Tem certeza que deseja remover ${nome} do Rank?`)) return;
+window.removerApenasDoRank = async (nome) => {
+  if(!confirm(`Remover ${nome} apenas do Rank? (Ele continuará na lista de Aprovados)`)) return;
   rank = rank.filter(p => p.nome !== nome);
-  aprovados = aprovados.filter(p => p.nome !== nome);
+  await salvar();
+};
+
+window.adicionarAoRank = async (nome) => {
+  if(!confirm(`Adicionar ${nome} de volta ao Rank?`)) return;
+  if(!rank.find(p => p.nome === nome)) {
+    rank.push({nome: nome, matches: 0, kills: 0});
+    await salvar(); 
+  }
+};
+
+window.removerDoRank=async(nome)=>{
+  if(!confirm(`Remover ${nome} apenas do Rank? (Ele continuará na lista de Aprovados)`)) return;
+  rank = rank.filter(p => p.nome !== nome);
   await salvar();
 };
 
@@ -687,6 +704,14 @@ listaEspera.innerHTML="";
  listaAprovados.innerHTML="";
  aprovados.forEach(p=>{
   const id = `dados_${p.email.replace(/[^a-zA-Z0-9]/g,'')}`;
+    
+  // Verifica se o soldado está atualmente no rank
+  const estaNoRank = rank.some(r => r.nome === p.nome);
+  
+  // Define o botão com a mesma cor (blue-600) e tamanho (flex-1) do 'Ver dados'
+  const btnRankAcao = estaNoRank
+    ? `<button onclick="removerApenasDoRank('${p.nome}')" class="bg-blue-600 flex-1 py-1.5 text-xs rounded font-bold uppercase">Rem Rank</button>`
+    : `<button onclick="adicionarAoRank('${p.nome}')" class="bg-blue-600 flex-1 py-1.5 text-xs rounded font-bold uppercase">Add Rank</button>`;
 
   listaAprovados.innerHTML+=`
   <div class="bg-black p-3 rounded border border-zinc-800 flex flex-col justify-between">
@@ -695,8 +720,7 @@ listaEspera.innerHTML="";
         ${p.fotoPerfil ? `<img src="${p.fotoPerfil}" class="w-14 h-14 object-cover rounded border border-zinc-600 cursor-pointer" title="Ver perfil" onclick="window.open('${p.fotoPerfil}', '_blank')">` : `<div class="w-14 h-14 bg-zinc-800 rounded border border-red-900 flex items-center justify-center text-[10px] text-red-500 text-center leading-tight">Sem<br>Foto</div>`}
         <div>
             <strong class="text-zinc-400 text-[10px] uppercase tracking-wider">Soldado</strong><br>
-            <span class="text-sm font-bold text-zinc-200">
-                ${p.nome} 
+           <span class="text-sm font-bold text-zinc-200">${p.nome}
                 ${p.emailVerificado ? '<span class="text-green-500 ml-1" title="Conta Verificada">✔</span>' : ''}
             </span>
         </div>
@@ -706,7 +730,7 @@ listaEspera.innerHTML="";
       Dados ocultos
     </div>
 
-    <div class="flex gap-2 mt-auto">
+    <div class="flex flex-wrap gap-2 mt-auto">
         <button onclick="
         const el = document.getElementById('${id}');
         if(el.textContent.includes('ocultos')){
@@ -724,10 +748,11 @@ listaEspera.innerHTML="";
         class="bg-red-600 px-3 py-1.5 text-xs rounded font-bold uppercase">
         Del
         </button>
+
+        ${btnRankAcao}
     </div>
   </div>`;
  });
-
  contagemAprovados.textContent = aprovados.length;
 
  if(document.getElementById('listaPendentes')) {
