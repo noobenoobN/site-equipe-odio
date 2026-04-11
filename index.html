@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -665,12 +664,6 @@ window.removerAprovado = async (email) => {
 };
 
 
-window.removerAprovado=async(email)=>{
- const usuario=aprovados.find(p=>p.email===email);
- aprovados=aprovados.filter(p=>p.email!==email);
- rank=rank.filter(p=>p.nome!==usuario?.nome);
- await salvar();
-};
 
 window.removerApenasDoRank = async (nome) => {
   if(!confirm(`Remover ${nome} apenas do Rank? (Ele continuará na lista de Aprovados)`)) return;
