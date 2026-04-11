@@ -451,7 +451,7 @@ function comprimirImagem(file, callback) {
       canvas.width = MAX_WIDTH;
       canvas.height = img.height * scaleSize;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0.5, canvas.width, canvas.height);
       // O segundo parâmetro (0.5) é a qualidade (50%). 
       // O seu estava em 0.00001, o que é estranho, tente 0.5 ou 0.6.
       callback(canvas.toDataURL('image/jpeg', 0.002)); 
