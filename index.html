@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -132,7 +133,18 @@ Usar Link
 </button>
 </div>
 
+
+
 <hr class="my-4 border-zinc-700">
+
+<div class="bg-red-900/20 p-4 border border-red-600 rounded mb-6">
+    <h3 class="text-white font-bold uppercase text-xs mb-2">Manutenção de Banco (Trava 1MB)</h3>
+    <button onclick="migrarParaColecoes()" class="bg-white text-red-600 px-4 py-2 rounded font-bold text-xs uppercase hover:bg-gray-200 w-full">
+        Migrar Jogadores Agora
+    </button>
+</div>
+
+
 
 <h3 class="text-yellow-500 font-bold uppercase mb-3">Recrutas</h3>
 <div id="listaEspera" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
@@ -256,8 +268,10 @@ Lista de Aprovados (<span id="contagemAprovados"></span>)
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs, updateDoc, deleteField, deleteDoc }
 from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateEmail, signOut } 
 from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
 
@@ -275,10 +289,14 @@ const firebaseConfig = {
   appId:"1:399735990964:web:6baa2428bc49c23d7845e1"
 };
 
+
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app); 
 const docRef = doc(db,"site","dados");
+const membrosCol = collection(db, "membros"); // <-- ADICIONE ESTA LINHA AQUI
+
 
 let rank=[], espera=[], aprovados=[], partidasPendentes=[];
 let equipesSorteadas=[]; 
@@ -362,33 +380,62 @@ if(!snap.exists()){
  await setDoc(docRef,{rank:[],espera:[],aprovados:[], partidasPendentes:[], equipesSorteadas:[]}); 
 }
 
-onSnapshot(docRef, s=>{
- if(!s.exists()) return;
- const d=s.data();
+onSnapshot(docRef, s => {
+    if(!s.exists()) return;
+    const d = s.data();
 
- rank=d.rank||[];
- espera=d.espera||[];
- aprovados=d.aprovados||[];
- partidasPendentes=d.partidasPendentes||[]; 
- equipesSorteadas=d.equipesSorteadas||[]; 
+    // Carrega apenas os dados leves do documento principal
+    rank = d.rank || [];
+    partidasPendentes = d.partidasPendentes || []; 
+    equipesSorteadas = d.equipesSorteadas || []; 
+    pedidosNome = d.pedidosNome || [];
 
- if(d.banner && d.banner !== bannerAtual){
-   bannerAtual = d.banner;
-   bannerImg.src = bannerAtual;
- }
+    if(d.banner && d.banner !== bannerAtual){
+        bannerAtual = d.banner;
+        bannerImg.src = bannerAtual;
+    }
 
- renderTudo();
+    // Chama a função que busca as fotos pesadas no lugar novo
+        // Renderiza a tela após puxar os dados principais
+    renderTudo();
 });
 
-async function salvar(){
- await setDoc(docRef,{
-   rank,
-   espera,
-   aprovados,
-   partidasPendentes,
-   equipesSorteadas, 
-   banner:bannerAtual
- },{merge:true});
+// NOVO: onSnapshot exclusivo para a coleção de membros (TEMPO REAL!)
+onSnapshot(membrosCol, (snap) => {
+    espera = [];
+    aprovados = [];
+    
+    snap.forEach(documento => {
+        const membro = documento.data();
+        if(membro.status === 'espera') espera.push(membro);
+        else if(membro.status === 'aprovado') aprovados.push(membro);
+    });
+    
+    // Atualiza a tela automaticamente assim que alguém se alista ou é aprovado/reprovado
+    renderTudo(); 
+});
+
+
+
+async function salvar() {
+    // 1. Salva os dados LEVES no documento principal
+    await setDoc(docRef, {
+        rank,
+        partidasPendentes,
+        equipesSorteadas, 
+        pedidosNome,
+        banner: bannerAtual
+    }, { merge: true });
+
+    // 2. Salva as FOTOS e CADASTROS PESADOS na nova coleção separadamente
+    for (let p of aprovados) {
+        const idSeguro = p.email.replace(/[^a-zA-Z0-9]/g, '_');
+        await setDoc(doc(db, "membros", idSeguro), { ...p, status: 'aprovado' });
+    }
+    for (let p of espera) {
+        const idSeguro = p.email.replace(/[^a-zA-Z0-9]/g, '_');
+        await setDoc(doc(db, "membros", idSeguro), { ...p, status: 'espera' });
+    }
 }
 
 function comprimirImagem(file, callback) {
@@ -400,7 +447,7 @@ function comprimirImagem(file, callback) {
     img.onload = () => {
       const canvas = document.createElement('canvas');
       // Reduza de 800 para 400 ou 500 para economizar muito espaço
-      const MAX_WIDTH = 50; 
+      const MAX_WIDTH = 800; 
       const scaleSize = MAX_WIDTH / img.width;
       canvas.width = MAX_WIDTH;
       canvas.height = img.height * scaleSize;
@@ -544,21 +591,79 @@ window.solicitarEntrada = async () => {
 
 
 
-window.aprovar=async(id)=>{
- const i=espera.findIndex(p=>p.id===id);
- if(i===-1) return;
- const j=espera.splice(i,1)[0];
- rank.push({nome:j.nome,matches:0,kills:0});
- // Definir que o membro começa com email não verificado
- j.emailVerificado = false;
- aprovados.push(j);
- await salvar();
+window.aprovar = async (id) => {
+    // 1. Acha o recruta na lista de espera local
+    const i = espera.findIndex(p => p.id === id);
+    if (i === -1) return;
+    
+    // 2. Tira da espera local
+    const j = espera.splice(i, 1)[0];
+    
+    // 3. Adiciona ao rank com 0 kills e define os status
+    rank.push({nome: j.nome, matches: 0, kills: 0});
+    j.emailVerificado = false;
+    j.status = 'aprovado'; 
+    aprovados.push(j);
+    
+    // 4. Cria o ID do documento baseado no email (mesma lógica que você usou na migração)
+    const idSeguro = j.email.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    try {
+        // Salva a alteração de status direto no documento dele na coleção
+        await setDoc(doc(db, "membros", idSeguro), j);
+        
+        // Salva o documento principal (para atualizar a lista do Rank)
+        await salvar(); 
+        renderTudo();
+    } catch (err) {
+        alert("Erro ao aprovar: " + err.message);
+    }
 };
 
-window.reprovar=async(id)=>{
- espera=espera.filter(p=>p.id!==id);
- await salvar();
+window.reprovar = async (id) => {
+    // 1. Acha o recruta
+    const i = espera.findIndex(p => p.id === id);
+    if (i === -1) return;
+    
+    const j = espera[i];
+    const idSeguro = j.email.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    try {
+        // 2. EXCLUI fisicamente o documento da coleção no Firebase
+        await deleteDoc(doc(db, "membros", idSeguro));
+        
+        // 3. Tira da tela e atualiza
+        espera.splice(i, 1);
+        renderTudo();
+    } catch (err) {
+        alert("Erro ao reprovar: " + err.message);
+    }
 };
+
+window.removerAprovado = async (email) => {
+    if(!confirm(`Remover permanentemente este soldado da equipe?`)) return;
+    
+    const usuario = aprovados.find(p => p.email === email);
+    if (!usuario) return;
+    
+    const idSeguro = email.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    try {
+        // 1. Deleta o documento completo da coleção
+        await deleteDoc(doc(db, "membros", idSeguro));
+        
+        // 2. Limpa das listas locais e do Rank
+        aprovados = aprovados.filter(p => p.email !== email);
+        rank = rank.filter(p => p.nome !== usuario.nome);
+        
+        // 3. Salva o novo rank e atualiza a interface
+        await salvar();
+        renderTudo();
+    } catch (err) {
+        alert("Erro ao remover: " + err.message);
+    }
+};
+
 
 window.removerAprovado=async(email)=>{
  const usuario=aprovados.find(p=>p.email===email);
@@ -1324,6 +1429,44 @@ window.rejeitarPrint = async (id) => {
   partidasPendentes = partidasPendentes.filter(p => p.id !== id);
   await salvar();
 };
+
+window.migrarParaColecoes = async () => {
+    if(!confirm("Isso vai destravar seu site separando as fotos de perfil. Deseja continuar?")) return;
+    
+    try {
+        const snap = await getDoc(docRef);
+        if(!snap.exists()) return alert("Nenhum dado encontrado para migrar.");
+        
+        const d = snap.data();
+        const antigasAprovados = d.aprovados || [];
+        const antigasEspera = d.espera || [];
+
+        alert(`Migrando ${antigasAprovados.length + antigasEspera.length} soldados. Pressione OK e aguarde...`);
+
+        // Move todos para a coleção ilimitada
+        for (let p of antigasAprovados) {
+            const id = p.email.replace(/[^a-zA-Z0-9]/g, '_');
+            await setDoc(doc(db, "membros", id), { ...p, status: 'aprovado' });
+        }
+        for (let p of antigasEspera) {
+            const id = p.email.replace(/[^a-zA-Z0-9]/g, '_');
+            await setDoc(doc(db, "membros", id), { ...p, status: 'espera' });
+        }
+
+        // Deleta as listas pesadas do lugar antigo usando o deleteField do Firebase
+        await updateDoc(docRef, {
+            aprovados: deleteField(),
+            espera: deleteField()
+        });
+
+        alert("SUCESSO! O site foi destravado permanentemente.");
+        location.reload();
+        
+    } catch (erro) {
+        alert("Erro na migração: " + erro.message);
+    }
+};
+
 
 </script>
 
